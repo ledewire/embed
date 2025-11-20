@@ -13,11 +13,12 @@ interface AppProps {
     playerType?: string;
     autoplay?: boolean;
   };
+  onUnlock?: () => void;
 }
 
 type ModalState = "overlay" | "login" | "confirm" | "unlocked";
 
-export function App({ config }: AppProps) {
+export function App({ config, onUnlock }: AppProps) {
   const [modalState, setModalState] = useState<ModalState>("overlay");
   const [userBalance] = useState("3.00"); // Mock balance, will come from backend
 
@@ -34,9 +35,14 @@ export function App({ config }: AppProps) {
   };
 
   const handleConfirmPurchase = () => {
-    console.log("Purchase confirmed!");
     // TODO: Call backend API to process payment
     setModalState("unlocked");
+
+    if (onUnlock) {
+      setTimeout(() => {
+        onUnlock();
+      }, 100);
+    }
   };
 
   if (modalState === "unlocked") return null;

@@ -55,6 +55,17 @@ import style from "./style.css?inline"; // Import CSS as inline string
     }
   }
 
+  // Helper to play video
+  function playVideo(videoEl: HTMLElement) {
+    if (videoEl.tagName === "IFRAME") {
+      const iframe = videoEl as HTMLIFrameElement;
+      const playCmd = JSON.stringify({ method: "play" });
+      iframe.contentWindow?.postMessage(playCmd, "*");
+    } else if (videoEl.tagName === "VIDEO") {
+      (videoEl as HTMLVideoElement).play();
+    }
+  }
+
   if (!videoEl) {
     console.error(
       "LedeWire: No video player found. Cannot initialize paywall."
@@ -104,6 +115,9 @@ import style from "./style.css?inline"; // Import CSS as inline string
   appRoot.style.height = "100%";
   shadow.appendChild(appRoot);
 
-  // Render Preact app
-  render(<App config={config as any} />, appRoot);
+  // Render Preact app with playVideo callback
+  render(
+    <App config={config as any} onUnlock={() => playVideo(videoEl)} />,
+    appRoot
+  );
 })();
