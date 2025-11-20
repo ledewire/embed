@@ -63,7 +63,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
           boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
           width: "100%",
           maxWidth: "min(460px, calc(100vw - 40px))",
-          maxHeight: "min(85vh, calc(100vh - 40px))",
+          maxHeight: "min(80vh, calc(100vh - 40px))",
           overflowY: "auto",
           padding: "clamp(20px, 5vw, 40px)",
         }}
