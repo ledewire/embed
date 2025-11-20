@@ -1,8 +1,9 @@
-import { h } from "preact";
 import { useState } from "preact/hooks";
 import { Overlay } from "./components/Overlay";
 import { LoginModal } from "./components/LoginModal";
-import "./style.css"; // Import so Vite processes it, but we'll inject manually in main.tsx
+import { ConfirmModal } from "./components/ConfirmModal";
+import "./style.css";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
 interface AppProps {
   config: {
@@ -14,21 +15,31 @@ interface AppProps {
   };
 }
 
-import { GoogleOAuthProvider } from "@react-oauth/google";
+type ModalState = "overlay" | "login" | "confirm" | "unlocked";
 
 export function App({ config }: AppProps) {
-  const [isLocked, setIsLocked] = useState(true);
-  const [showLogin, setShowLogin] = useState(false);
+  const [modalState, setModalState] = useState<ModalState>("overlay");
+  const [userBalance] = useState("3.00"); // Mock balance, will come from backend
 
   const handlePurchaseClick = () => {
-    setShowLogin(true);
+    setModalState("login");
   };
 
-  const handleCloseLogin = () => {
-    setShowLogin(false);
+  const handleLoginSuccess = () => {
+    setModalState("confirm");
   };
 
-  if (!isLocked) return null;
+  const handleCloseModal = () => {
+    setModalState("overlay");
+  };
+
+  const handleConfirmPurchase = () => {
+    console.log("Purchase confirmed!");
+    // TODO: Call backend API to process payment
+    setModalState("unlocked");
+  };
+
+  if (modalState === "unlocked") return null;
 
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
@@ -41,13 +52,27 @@ export function App({ config }: AppProps) {
   return (
     <GoogleOAuthProvider clientId={clientId}>
       <div className="ledewire-wrapper font-sans antialiased">
-        {!showLogin ? (
+        {modalState === "overlay" && (
           <Overlay
             price={config.price || "0.00"}
             onPurchase={handlePurchaseClick}
           />
-        ) : (
-          <LoginModal onClose={handleCloseLogin} />
+        )}
+
+        {modalState === "login" && (
+          <LoginModal
+            onClose={handleCloseModal}
+            onLoginSuccess={handleLoginSuccess}
+          />
+        )}
+
+        {modalState === "confirm" && (
+          <ConfirmModal
+            onClose={handleCloseModal}
+            onConfirm={handleConfirmPurchase}
+            balance={userBalance}
+            price={config.price || "0.00"}
+          />
         )}
       </div>
     </GoogleOAuthProvider>
