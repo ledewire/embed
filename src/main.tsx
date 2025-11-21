@@ -57,6 +57,9 @@ import style from "./style.css?inline"; // Import CSS as inline string
 
   // Helper to play video
   function playVideo(videoEl: HTMLElement) {
+    // Enable interaction
+    videoEl.style.pointerEvents = "auto";
+
     if (videoEl.tagName === "IFRAME") {
       const iframe = videoEl as HTMLIFrameElement;
       const playCmd = JSON.stringify({ method: "play" });
@@ -72,6 +75,9 @@ import style from "./style.css?inline"; // Import CSS as inline string
     );
     return;
   }
+
+  // Disable interaction immediately
+  videoEl.style.pointerEvents = "none";
 
   // Pause the video
   pauseVideo(videoEl);
