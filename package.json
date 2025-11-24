@@ -4,9 +4,15 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "vite --mode development",
+    "dev:staging": "vite --mode staging",
+    "dev:prod": "vite --mode production",
+    "build": "vite build --mode production",
+    "build:dev": "vite build --mode development",
+    "build:staging": "vite build --mode staging",
+    "build:prod": "vite build --mode production",
+    "preview": "vite preview",
+    "proxy": "node cors-proxy.cjs"
   },
   "repository": {
     "type": "git",

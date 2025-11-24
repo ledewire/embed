@@ -1,4 +1,6 @@
-import { useGoogleLogin } from "@react-oauth/google";
+import { useState } from "preact/hooks";
+import { GoogleLogin } from "@react-oauth/google";
+import { AuthService } from "../services/authService";
 
 interface LoginModalProps {
   onClose?: () => void;
@@ -6,33 +8,42 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
-  const login = useGoogleLogin({
-    onSuccess: (codeResponse) => {
-      console.log("Login successful:", codeResponse);
-      console.log("Authorization Code:", codeResponse.code);
-      // Trigger the confirm modal
-      if (onLoginSuccess) {
-        setTimeout(() => onLoginSuccess(), 500);
-      }
-    },
-    onError: (error) => {
-      console.error("Login Failed:", error);
-      alert("Google login failed. Please try again.");
-    },
-    onNonOAuthError: (error) => {
-      console.error("Non-OAuth Error:", error);
-      alert("An error occurred during login.");
-    },
-    flow: "auth-code",
-  });
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleGoogleLogin = () => {
-    console.log("Google login button clicked");
+  // Google login handler (not implemented yet)
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setError("Google login is not yet implemented");
+  };
+
+  const handleGoogleError = () => {
+    setError("Google login failed. Please try again.");
+  };
+
+  // Email/Password login
+  const handleEmailLogin = async (e: Event) => {
+    e.preventDefault();
+
+    if (!email || !password) {
+      setError("Please enter both email and password");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
     try {
-      login();
-    } catch (error) {
-      console.error("Error calling login:", error);
-      alert("Failed to initiate Google login.");
+      await AuthService.loginWithEmail(email, password);
+
+      if (onLoginSuccess) {
+        setTimeout(() => onLoginSuccess(), 300);
+      }
+    } catch (err: any) {
+      setError(err.message || "Invalid email or password");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -120,57 +131,36 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
           Sign in to access your wallet and purchase this premium content.
         </p>
 
-        {/* Google Button */}
-        <button
-          onClick={handleGoogleLogin}
-          style={{
-            width: "100%",
-            padding: "12px 16px",
-            borderRadius: "6px",
-            border: "1px solid #D1D5DB",
-            background: "white",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "12px",
-            fontSize: "15px",
-            fontWeight: "500",
-            color: "#374151",
-            cursor: "pointer",
-            transition: "all 0.2s",
-            marginBottom: "24px",
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = "#F9FAFB";
-            e.currentTarget.style.borderColor = "#9CA3AF";
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = "white";
-            e.currentTarget.style.borderColor = "#D1D5DB";
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18">
-            <g fill="none" fillRule="evenodd">
-              <path
-                d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
-                fill="#4285F4"
-              />
-              <path
-                d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z"
-                fill="#34A853"
-              />
-              <path
-                d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
-                fill="#FBBC05"
-              />
-              <path
-                d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.428 0 9.003 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z"
-                fill="#EA4335"
-              />
-            </g>
-          </svg>
-          <span>Continue with Google</span>
-        </button>
+        {/* Error Message */}
+        {error && (
+          <div
+            style={{
+              background: "#FEE2E2",
+              border: "1px solid #FCA5A5",
+              borderRadius: "6px",
+              padding: "12px",
+              marginBottom: "20px",
+              color: "#991B1B",
+              fontSize: "14px",
+              textAlign: "left",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {/* Google Login Button */}
+        <div style={{ marginBottom: "24px" }}>
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            width="100%"
+            size="large"
+            text="continue_with"
+            shape="rectangular"
+            logo_alignment="left"
+          />
+        </div>
 
         {/* Divider */}
         <div
@@ -214,7 +204,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
         </div>
 
         {/* Email/Password Form */}
-        <form onSubmit={(e) => e.preventDefault()}>
+        <form onSubmit={handleEmailLogin}>
           <div style={{ marginBottom: "16px" }}>
             <label
               style={{
@@ -230,7 +220,11 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
             </label>
             <input
               type="email"
+              value={email}
+              onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
               placeholder="your.email@example.com"
+              disabled={isLoading}
+              required
               style={{
                 width: "100%",
                 padding: "10px 14px",
@@ -240,6 +234,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
                 outline: "none",
                 transition: "border-color 0.2s",
                 boxSizing: "border-box",
+                opacity: isLoading ? 0.6 : 1,
               }}
               onFocus={(e) => (e.currentTarget.style.borderColor = "#4A7C9C")}
               onBlur={(e) => (e.currentTarget.style.borderColor = "#D1D5DB")}
@@ -261,6 +256,10 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
             </label>
             <input
               type="password"
+              value={password}
+              onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
+              disabled={isLoading}
+              required
               style={{
                 width: "100%",
                 padding: "10px 14px",
@@ -270,6 +269,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
                 outline: "none",
                 transition: "border-color 0.2s",
                 boxSizing: "border-box",
+                opacity: isLoading ? 0.6 : 1,
               }}
               onFocus={(e) => (e.currentTarget.style.borderColor = "#4A7C9C")}
               onBlur={(e) => (e.currentTarget.style.borderColor = "#D1D5DB")}
@@ -277,30 +277,30 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
           </div>
 
           <button
-            type="button"
-            onClick={() => {
-              console.log("Demo login - proceeding to confirm modal");
-              if (onLoginSuccess) {
-                onLoginSuccess();
-              }
-            }}
+            type="submit"
+            disabled={isLoading}
             style={{
               width: "100%",
               padding: "12px",
               borderRadius: "6px",
               border: "none",
-              background: "#4A7C9C",
+              background: isLoading ? "#9CA3AF" : "#4A7C9C",
               color: "white",
               fontSize: "15px",
               fontWeight: "600",
-              cursor: "pointer",
+              cursor: isLoading ? "not-allowed" : "pointer",
               transition: "all 0.2s",
               marginBottom: "20px",
+              opacity: isLoading ? 0.6 : 1,
             }}
-            onMouseOver={(e) => (e.currentTarget.style.background = "#3D6883")}
-            onMouseOut={(e) => (e.currentTarget.style.background = "#4A7C9C")}
+            onMouseOver={(e) => {
+              if (!isLoading) e.currentTarget.style.background = "#3D6883";
+            }}
+            onMouseOut={(e) => {
+              if (!isLoading) e.currentTarget.style.background = "#4A7C9C";
+            }}
           >
-            Log In
+            {isLoading ? "Logging in..." : "Log In"}
           </button>
 
           <div style={{ textAlign: "center", marginBottom: "16px" }}>

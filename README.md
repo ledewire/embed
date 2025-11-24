@@ -1,106 +1,122 @@
 # LedeWire Embed Script
 
-A lightweight, embeddable JavaScript library for monetizing video content (Vimeo & HTML5) via LedeWire.
+A lightweight paywall embed script for video content with email authentication.
 
-## Features
+## 🚀 Quick Start
 
-- **Universal Embed**: Works with a single `<script>` tag.
-- **Platform Support**: Supports Vimeo iframes and HTML5 `<video>` elements.
-- **Paywall Overlay**: Customizable overlay that blocks playback until unlocked.
-- **Modern Stack**: Built with **Preact**, **TypeScript**, and **Tailwind CSS** for performance and developer experience.
-- **Shadow DOM**: Uses Shadow DOM to isolate styles and prevent conflicts with host websites.
-- **Developer Friendly**: Hot-reload development environment via Vite.
+### Development (2 Terminals Required)
 
-## Prerequisites
-
-- Node.js (v18+)
-- Docker (optional, for containerized development)
-
-## Installation
+**Terminal 1 - Start CORS Proxy:**
 
 ```bash
-npm install
+npm run proxy
 ```
 
-## Configuration
+_Keep this running_
 
-1.  Copy the example environment file:
-
-    ```bash
-    cp .env.dev .env
-    ```
-
-2.  Open `.env` and add your Google Client ID:
-
-    ```env
-    VITE_GOOGLE_CLIENT_ID=your_actual_client_id
-    ```
-
-## Development
-
-Start the development server with hot-reload:
+**Terminal 2 - Start Dev Server:**
 
 ```bash
 npm run dev
 ```
 
-This will serve the `index.html` file at `http://localhost:5173`.
+**Open Browser:**
 
-### Docker Development
+```
+http://localhost:5173
+```
 
-You can also run the development environment inside a Docker container:
-
-1.  **Build the image:**
-
-    ```bash
-    docker build -t ledewire-embed .
-    ```
-
-2.  **Run the container:**
-
-    ```bash
-    docker run -p 5173:5173 -v $(pwd):/app -v /app/node_modules ledewire-embed
-    ```
-
-## Building for Production
-
-To create the minified production bundle:
+### Production Build
 
 ```bash
 npm run build
 ```
 
-This will generate `dist/ledewire.iife.js`.
+Output: `dist/ledewire.iife.js` and `dist/embed.css`
 
-## Usage
+## 📁 Environment Configuration
 
-Include the script on your page with the necessary configuration attributes:
+### `.env` (Development)
 
-```html
-<script
-  src="https://cdn.ledewire.com/embed.js" 
-  data-content-id="YOUR_CONTENT_ID"
-  data-price="2.00"
-  data-creator-id="YOUR_CREATOR_ID"
-  data-player="vimeo"
-></script>
+```bash
+VITE_API_BASE_URL=http://localhost:8010  # CORS proxy for local dev
 ```
 
-**Attributes:**
+### `.env.production` (Production)
 
-| Attribute | Description |
-| :--- | :--- |
-| `data-content-id` | The unique ID of the content from LedeWire. |
-| `data-price` | Price to display (e.g., "2.00"). |
-| `data-creator-id` | The creator's unique identifier. |
-| `data-player` | Player type: `"vimeo"` or `"html5"`. |
-| `data-autoplay` | (Optional) `"true"` to autoplay after unlock. |
+```bash
+VITE_API_BASE_URL=https://api.ledewire.com/v1  # Direct API (no proxy)
+```
 
-## Project Structure
+## 🔧 Why CORS Proxy?
 
-- `src/main.tsx`: Entry point. Initializes Shadow DOM and mounts the Preact app.
-- `src/App.tsx`: Main application component.
-- `src/components/`: React/Preact components (Overlay, LoginModal).
-- `src/style.css`: Tailwind CSS entry point.
-- `vite.config.ts`: Vite build configuration.
-- `tailwind.config.js`: Tailwind configuration.
+**The Problem:**
+
+- ✅ API works in Postman
+- ❌ API blocks browser requests from `localhost` (CORS policy)
+
+**The Solution:**
+
+- **Development:** Use local CORS proxy (`localhost:8010`)
+- **Production:** Direct API calls work (no CORS issues)
+
+```
+Development Flow:
+Browser → http://localhost:8010 (proxy) → https://api.ledewire.com/v1 ✅
+
+Production Flow:
+Browser → https://api.ledewire.com/v1 ✅
+```
+
+## 🎯 Features
+
+- ✅ Email/Password authentication
+- 🚧 Google OAuth login (UI ready, backend integration pending)
+- ✅ Video paywall overlay
+- ✅ Purchase confirmation flow
+- ✅ Token management (JWT)
+- ✅ **Auto token refresh** - Seamless session extension
+- ✅ **Skip login for authenticated users** - Better UX
+- ✅ Responsive design
+- ✅ Shadow DOM isolation
+
+## 📦 Bundle Size
+
+- **JS:** 35.99 kB (11.36 kB gzipped)
+- **CSS:** 5.13 kB (1.35 kB gzipped)
+
+## 🛠️ Tech Stack
+
+- Preact
+- TypeScript
+- Tailwind CSS
+- Vite
+
+## 📚 API Integration
+
+### Base URL
+
+```
+https://api.ledewire.com/v1
+```
+
+### Endpoints Used
+
+- `POST /auth/login/email` - Email/password login
+- `POST /auth/token/refresh` - Refresh access token
+
+## 🐛 Troubleshooting
+
+### CORS Error in Browser?
+
+Make sure the proxy is running:
+
+```bash
+npm run proxy
+```
+
+### Port 8010 Already in Use?
+
+```bash
+kill -9 $(lsof -ti:8010)
+```

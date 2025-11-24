@@ -9,7 +9,6 @@ import style from "./style.css?inline"; // Import CSS as inline string
       document.querySelector("script[data-content-id]");
 
     if (!script || !(script instanceof HTMLScriptElement)) {
-      console.warn("LedeWire: Configuration script tag not found.");
       return {};
     }
 
@@ -70,9 +69,6 @@ import style from "./style.css?inline"; // Import CSS as inline string
   }
 
   if (!videoEl) {
-    console.error(
-      "LedeWire: No video player found. Cannot initialize paywall."
-    );
     return;
   }
 
@@ -85,7 +81,6 @@ import style from "./style.css?inline"; // Import CSS as inline string
   // Ensure parent container has relative positioning for absolute overlay
   const parent = videoEl.parentElement;
   if (!parent) {
-    console.error("LedeWire: Video element has no parent container.");
     return;
   }
 

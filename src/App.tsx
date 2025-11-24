@@ -1,9 +1,10 @@
-import { useState } from "preact/hooks";
+import { useState, useEffect } from "preact/hooks";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import { Overlay } from "./components/Overlay";
 import { LoginModal } from "./components/LoginModal";
 import { ConfirmModal } from "./components/ConfirmModal";
+import { AuthService } from "./services/authService";
 import "./style.css";
-import { GoogleOAuthProvider } from "@react-oauth/google";
 
 interface AppProps {
   config: {
@@ -21,12 +22,25 @@ type ModalState = "overlay" | "login" | "confirm" | "unlocked";
 export function App({ config, onUnlock }: AppProps) {
   const [modalState, setModalState] = useState<ModalState>("overlay");
   const [userBalance] = useState("3.00"); // Mock balance, will come from backend
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Check if user is already logged in on mount
+  useEffect(() => {
+    const isLoggedIn = AuthService.isAuthenticated();
+    setIsAuthenticated(isLoggedIn);
+  }, []);
 
   const handlePurchaseClick = () => {
-    setModalState("login");
+    // Skip login modal if user is already authenticated
+    if (isAuthenticated) {
+      setModalState("confirm");
+    } else {
+      setModalState("login");
+    }
   };
 
   const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
     setModalState("confirm");
   };
 
@@ -47,16 +61,12 @@ export function App({ config, onUnlock }: AppProps) {
 
   if (modalState === "unlocked") return null;
 
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
-
-  if (!clientId) {
-    console.warn(
-      "WARNING: VITE_GOOGLE_CLIENT_ID is not set. Google login will not work."
-    );
-  }
+  // Google Client ID (can be updated when Google login is implemented)
+  const googleClientId =
+    import.meta.env.VITE_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID";
 
   return (
-    <GoogleOAuthProvider clientId={clientId}>
+    <GoogleOAuthProvider clientId={googleClientId}>
       <div className="ledewire-wrapper font-sans antialiased">
         {modalState === "overlay" && (
           <Overlay
