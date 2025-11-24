@@ -4,20 +4,10 @@
  * Environment-aware configuration for dev/staging/production
  */
 
-const ENV = import.meta.env.VITE_ENV || import.meta.env.MODE || "development";
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "https://api.ledewire.com/v1";
 const USE_WP_PROXY = import.meta.env.VITE_USE_WP_PROXY === "true";
 const WP_PROXY_URL = import.meta.env.VITE_WP_PROXY_URL || "";
-
-// Log configuration on initialization (development only)
-if (ENV === "development") {
-  console.log("🔧 LedeWire API Configuration:", {
-    environment: ENV,
-    useProxy: USE_WP_PROXY,
-    apiUrl: USE_WP_PROXY ? WP_PROXY_URL : API_BASE_URL,
-  });
-}
 
 export interface ApiError {
   error: string | { code?: number; message: string };

@@ -75,10 +75,26 @@ export class AuthService {
   }
 
   /**
-   * Check if user is authenticated
+   * Check if user is authenticated (synchronous)
    */
   static isAuthenticated(): boolean {
     return TokenManager.isAuthenticated();
+  }
+
+  /**
+   * Ensure user is authenticated with a valid token (async, refreshes if needed)
+   */
+  static async ensureAuthenticated(): Promise<boolean> {
+    try {
+      const accessToken = TokenManager.getAccessToken();
+      if (!accessToken) return false;
+
+      // This will trigger a refresh if the token is expired
+      await TokenManager.ensureValidToken();
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 
   /**

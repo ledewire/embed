@@ -22,25 +22,35 @@ type ModalState = "overlay" | "login" | "confirm" | "unlocked";
 export function App({ config, onUnlock }: AppProps) {
   const [modalState, setModalState] = useState<ModalState>("overlay");
   const [userBalance] = useState("3.00"); // Mock balance, will come from backend
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Check if user is already logged in on mount
+  // Check if user is already logged in on mount and refresh token if needed
   useEffect(() => {
-    const isLoggedIn = AuthService.isAuthenticated();
-    setIsAuthenticated(isLoggedIn);
+    const checkAuth = async () => {
+      try {
+        await AuthService.ensureAuthenticated();
+      } catch (error) {
+        // Token refresh failed, user will need to login again
+      }
+    };
+    checkAuth();
   }, []);
 
-  const handlePurchaseClick = () => {
-    // Skip login modal if user is already authenticated
-    if (isAuthenticated) {
-      setModalState("confirm");
-    } else {
+  const handlePurchaseClick = async () => {
+    // Check authentication and refresh token if needed
+    try {
+      const isLoggedIn = await AuthService.ensureAuthenticated();
+
+      if (isLoggedIn) {
+        setModalState("confirm");
+      } else {
+        setModalState("login");
+      }
+    } catch (error) {
       setModalState("login");
     }
   };
 
   const handleLoginSuccess = () => {
-    setIsAuthenticated(true);
     setModalState("confirm");
   };
 
