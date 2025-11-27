@@ -4,6 +4,7 @@ import { Overlay } from "./components/Overlay";
 import { LoginModal } from "./components/LoginModal";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { AuthService } from "./services/authService";
+import { PurchaseService } from "./services/purchaseService";
 import "./style.css";
 
 interface AppProps {
@@ -21,13 +22,25 @@ type ModalState = "overlay" | "login" | "confirm" | "unlocked";
 
 export function App({ config, onUnlock }: AppProps) {
   const [modalState, setModalState] = useState<ModalState>("overlay");
-  const [userBalance] = useState("3.00"); // Mock balance, will come from backend
+  const [userBalance, setUserBalance] = useState("0.00");
 
   // Check if user is already logged in on mount and refresh token if needed
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        await AuthService.ensureAuthenticated();
+        const isAuth = await AuthService.ensureAuthenticated();
+        if (isAuth) {
+          // Fetch wallet balance if authenticated
+          try {
+            const balanceData = await PurchaseService.getWalletBalance();
+            const balanceInDollars = (balanceData.balance_cents / 100).toFixed(
+              2
+            );
+            setUserBalance(balanceInDollars);
+          } catch (error) {
+            // Failed to fetch balance, keep default
+          }
+        }
       } catch (error) {
         // Token refresh failed, user will need to login again
       }
@@ -50,7 +63,15 @@ export function App({ config, onUnlock }: AppProps) {
     }
   };
 
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = async () => {
+    // Fetch wallet balance after successful login
+    try {
+      const balanceData = await PurchaseService.getWalletBalance();
+      const balanceInDollars = (balanceData.balance_cents / 100).toFixed(2);
+      setUserBalance(balanceInDollars);
+    } catch (error) {
+      // Failed to fetch balance, keep default
+    }
     setModalState("confirm");
   };
 
@@ -58,8 +79,26 @@ export function App({ config, onUnlock }: AppProps) {
     setModalState("overlay");
   };
 
-  const handleConfirmPurchase = () => {
-    // TODO: Call backend API to process payment
+  const handleConfirmPurchase = async () => {
+    if (!config.contentId) {
+      throw new Error("Content ID is required for purchase");
+    }
+
+    // Convert price from string to cents
+    const priceCents = Math.round(parseFloat(config.price || "0") * 100);
+
+    // Call purchase API
+    await PurchaseService.purchaseContent(config.contentId, priceCents);
+
+    // Update balance after successful purchase
+    try {
+      const balanceData = await PurchaseService.getWalletBalance();
+      const balanceInDollars = (balanceData.balance_cents / 100).toFixed(2);
+      setUserBalance(balanceInDollars);
+    } catch (error) {
+      // Failed to fetch balance
+    }
+
     setModalState("unlocked");
 
     if (onUnlock) {
