@@ -1,6 +1,8 @@
+import { useState } from "preact/hooks";
+
 interface ConfirmModalProps {
   onClose?: () => void;
-  onConfirm?: () => void;
+  onConfirm?: () => Promise<void>;
   balance: string;
   price: string;
 }
@@ -11,6 +13,25 @@ export function ConfirmModal({
   balance,
   price,
 }: ConfirmModalProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handlePurchase = async () => {
+    if (!onConfirm) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await onConfirm();
+    } catch (err: any) {
+      setError(
+        err.message || "Failed to complete purchase. Please try again."
+      );
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div
       style={{
@@ -172,32 +193,55 @@ export function ConfirmModal({
           </div>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div
+            style={{
+              background: "#FEE2E2",
+              border: "1px solid #FCA5A5",
+              borderRadius: "8px",
+              padding: "12px 16px",
+              marginBottom: "16px",
+              fontSize: "14px",
+              color: "#991B1B",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
         {/* Purchase Button */}
         <button
-          onClick={onConfirm}
+          onClick={handlePurchase}
+          disabled={isLoading}
           style={{
             width: "100%",
             padding: "14px",
             borderRadius: "6px",
             border: "none",
-            background: "#4A7C9C",
+            background: isLoading ? "#9CA3AF" : "#4A7C9C",
             color: "white",
             fontSize: "15px",
             fontWeight: "600",
-            cursor: "pointer",
+            cursor: isLoading ? "not-allowed" : "pointer",
             transition: "all 0.2s",
             marginBottom: "24px",
+            opacity: isLoading ? 0.7 : 1,
           }}
           onMouseOver={(e) => {
-            e.currentTarget.style.background = "#3D6883";
-            e.currentTarget.style.transform = "translateY(-1px)";
+            if (!isLoading) {
+              e.currentTarget.style.background = "#3D6883";
+              e.currentTarget.style.transform = "translateY(-1px)";
+            }
           }}
           onMouseOut={(e) => {
-            e.currentTarget.style.background = "#4A7C9C";
-            e.currentTarget.style.transform = "translateY(0)";
+            if (!isLoading) {
+              e.currentTarget.style.background = "#4A7C9C";
+              e.currentTarget.style.transform = "translateY(0)";
+            }
           }}
         >
-          Purchase Article
+          {isLoading ? "Processing..." : "Purchase Article"}
         </button>
 
         {/* Footer */}

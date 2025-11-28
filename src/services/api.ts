@@ -49,7 +49,7 @@ export class ApiClient {
       method: "GET",
       headers: this.getHeaders(includeAuth),
       mode: "cors",
-      credentials: includeAuth ? "include" : "omit",
+      credentials: "omit",
     });
 
     return this.handleResponse<T>(response);
@@ -70,7 +70,7 @@ export class ApiClient {
       headers: this.getHeaders(includeAuth),
       body: JSON.stringify(data),
       mode: "cors",
-      credentials: includeAuth ? "include" : "omit",
+      credentials: "omit",
     });
 
     return this.handleResponse<T>(response);
@@ -102,7 +102,7 @@ export class ApiClient {
       headers: this.getHeaders(includeAuth),
       body: JSON.stringify(data),
       mode: "cors",
-      credentials: includeAuth ? "include" : "omit",
+      credentials: "omit",
     });
 
     return this.handleResponse<T>(response);
@@ -113,7 +113,7 @@ export class ApiClient {
       method: "DELETE",
       headers: this.getHeaders(includeAuth),
       mode: "cors",
-      credentials: includeAuth ? "include" : "omit",
+      credentials: "omit",
     });
 
     return this.handleResponse<T>(response);
