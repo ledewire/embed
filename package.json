@@ -38,6 +38,7 @@
     "vite": "^7.2.2"
   },
   "dependencies": {
-    "@react-oauth/google": "^0.12.2"
+    "@react-oauth/google": "^0.12.2",
+    "axios": "^1.13.2"
   }
 }

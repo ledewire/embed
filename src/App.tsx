@@ -5,6 +5,7 @@ import { LoginModal } from "./components/LoginModal";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { AuthService } from "./services/authService";
 import "./style.css";
+import { ConfigProvider, useConfig } from "./contexts/ConfigContext";
 
 interface AppProps {
   config: {
@@ -20,6 +21,16 @@ interface AppProps {
 type ModalState = "overlay" | "login" | "confirm" | "unlocked";
 
 export function App({ config, onUnlock }: AppProps) {
+  return (
+    <ConfigProvider>
+      <AppContent config={config} onUnlock={onUnlock} />
+    </ConfigProvider>
+  );
+}
+
+const AppContent = ({ config, onUnlock }: AppProps) => {
+  const { googleClientId, isLoading, error } = useConfig();
+
   const [modalState, setModalState] = useState<ModalState>("overlay");
   const [userBalance] = useState("3.00"); // Mock balance, will come from backend
 
@@ -70,10 +81,32 @@ export function App({ config, onUnlock }: AppProps) {
   };
 
   if (modalState === "unlocked") return null;
+  console.log(googleClientId);
 
-  // Google Client ID (can be updated when Google login is implemented)
-  const googleClientId =
-    import.meta.env.VITE_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID";
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading configuration...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Failed to load configuration</p>
+          <p className="text-gray-600 text-sm">{error}</p>
+        </div>
+      </div>
+    );
+  }
+  if (!googleClientId) return null;
+  console.log("generated id: ", googleClientId);
+  console.log("our id: ", import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
   return (
     <GoogleOAuthProvider clientId={googleClientId}>
@@ -103,4 +136,4 @@ export function App({ config, onUnlock }: AppProps) {
       </div>
     </GoogleOAuthProvider>
   );
-}
+};
