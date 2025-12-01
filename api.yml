@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: LedeWire API
-  version: 1.0.0
+  version: 1.1.0
   description: >
     LedeWire API for buyer/seller authentication, wallet funding, content purchases, and seller content management.
 
@@ -592,19 +592,42 @@ components:
 
     PurchaseStatus:
       type: string
-      enum: [completed, refunded]
+      enum: [completed, refunded, pending, reverted, failed]
 
-    Purchase:
+    PurchaseResponse:
       type: object
       properties:
         id:
           type: string
         content_id:
           type: string
+        content:
+          type: object
+          properties:
+            id:
+              type: string
+            content_type:
+              type: string
+            title:
+              type: string
         buyer_id:
           type: string
+        buyer:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
         seller_id:
           type: string
+        seller:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
         amount_cents:
           type: integer
         timestamp:
@@ -1246,6 +1269,9 @@ paths:
       summary: Get user's current checkout state for specific content
       security:
         - BearerAuth: [] # Optional - endpoint works with or without auth
+      tags:
+        - Checkout
+        - Implemented
       parameters:
         - name: content_id
           in: path
@@ -1291,25 +1317,45 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Purchase'
+                  $ref: '#/components/schemas/PurchaseResponse'
               examples:
-                purchase_list:
-                  summary: List of user purchases
-                  value:
-                    - id: '3f7b9a8c-1d2e-3f4a-5b6c-7d8e9f0a1b2c'
-                      content_id: 'b1c2d3e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e'
-                      buyer_id: '09357c22-389a-4fab-b166-822e52a5bf5e'
-                      seller_id: '87654321-dcba-4fed-ba98-76543210fedc'
-                      amount_cents: 1200
-                      timestamp: '2025-05-18T13:27:45Z'
-                      status: 'completed'
-                    - id: '4a5b6c7d-8e9f-0a1b-2c3d-4e5f6a7b8c9d'
-                      content_id: 'c2d3e4f5-a6b7-8c9d-0e1f-2a3b4c5d6e7f'
-                      buyer_id: '09357c22-389a-4fab-b166-822e52a5bf5e'
-                      seller_id: '87654321-dcba-4fed-ba98-76543210fedc'
-                      amount_cents: 1500
-                      timestamp: '2025-05-17T09:15:30Z'
-                      status: 'completed'
+                    purchase_list:
+                      summary: List of user purchases
+                      value:
+                        - id: '3f7b9a8c-1d2e-3f4a-5b6c-7d8e9f0a1b2c'
+                          content_id: 'b1c2d3e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e'
+                          content:
+                            id: 'b1c2d3e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e'
+                            content_type: 'markdown'
+                            title: 'Sample Blog Post'
+                          buyer_id: '09357c22-389a-4fab-b166-822e52a5bf5e'
+                          buyer:
+                            id: '09357c22-389a-4fab-b166-822e52a5bf5e'
+                            name: 'Buyer Name'
+                          seller_id: '87654321-dcba-4fed-ba98-76543210fedc'
+                          seller:
+                            id: '87654321-dcba-4fed-ba98-76543210fedc'
+                            name: 'Seller Name'
+                          amount_cents: 1200
+                          timestamp: '2025-05-18T13:27:45Z'
+                          status: 'completed'
+                        - id: '4a5b6c7d-8e9f-0a1b-2c3d-4e5f6a7b8c9d'
+                          content_id: 'c2d3e4f5-a6b7-8c9d-0e1f-2a3b4c5d6e7f'
+                          content:
+                            id: 'c2d3e4f5-a6b7-8c9d-0e1f-2a3b4c5d6e7f'
+                            content_type: 'markdown'
+                            title: 'Advanced Technology Guide'
+                          buyer_id: '09357c22-389a-4fab-b166-822e52a5bf5e'
+                          buyer:
+                            id: '09357c22-389a-4fab-b166-822e52a5bf5e'
+                            name: 'Buyer Name'
+                          seller_id: '87654321-dcba-4fed-ba98-76543210fedc'
+                          seller:
+                            id: '87654321-dcba-4fed-ba98-76543210fedc'
+                            name: 'Seller Name'
+                          amount_cents: 1500
+                          timestamp: '2025-05-17T09:15:30Z'
+                          status: 'completed'
         '401':
           description: Unauthorized - Invalid or missing authentication token
           content:
@@ -1342,7 +1388,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Purchase'
+                $ref: '#/components/schemas/PurchaseResponse'
               examples:
                 purchase_completed:
                   summary: Successfully purchased content
@@ -1414,18 +1460,28 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Purchase'
+                $ref: '#/components/schemas/PurchaseResponse'
               examples:
-                purchase:
-                  summary: Purchase details
-                  value:
-                    id: '3f7b9a8c-1d2e-3f4a-5b6c-7d8e9f0a1b2c'
-                    content_id: 'b1c2d3e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e'
-                    buyer_id: '09357c22-389a-4fab-b166-822e52a5bf5e'
-                    seller_id: '87654321-dcba-4fed-ba98-76543210fedc'
-                    amount_cents: 1200
-                    timestamp: '2025-05-18T13:27:45Z'
-                    status: 'completed'
+                    purchase:
+                      summary: Purchase details
+                      value:
+                        id: '3f7b9a8c-1d2e-3f4a-5b6c-7d8e9f0a1b2c'
+                        content_id: 'b1c2d3e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e'
+                        content:
+                          id: 'b1c2d3e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e'
+                          content_type: 'markdown'
+                          title: 'Sample Blog Post'
+                        buyer_id: '09357c22-389a-4fab-b166-822e52a5bf5e'
+                        buyer:
+                          id: '09357c22-389a-4fab-b166-822e52a5bf5e'
+                          name: 'Buyer Name'
+                        seller_id: '87654321-dcba-4fed-ba98-76543210fedc'
+                        seller:
+                          id: '87654321-dcba-4fed-ba98-76543210fedc'
+                          name: 'Seller Name'
+                        amount_cents: 1200
+                        timestamp: '2025-05-18T13:27:45Z'
+                        status: 'completed'
         '401':
           description: Unauthorized - Invalid or missing authentication token
           content:
