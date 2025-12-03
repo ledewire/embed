@@ -23,6 +23,12 @@ export interface WalletBalanceResponse {
   balance_cents: number;
 }
 
+export interface PaymentSessionResponse {
+  client_secret: string;
+  session_id: string;
+  public_key: string;
+}
+
 export class PurchaseService {
   /**
    * Get wallet balance
@@ -59,7 +65,20 @@ export class PurchaseService {
       true
     );
   }
+
+  /**
+   * Create a payment session to add funds to wallet
+   */
+  static async createPaymentSession(
+    amountCents: number
+  ): Promise<PaymentSessionResponse> {
+    return await ApiClient.post<PaymentSessionResponse>(
+      "/wallet/payment-session",
+      {
+        amount_cents: amountCents,
+        currency: "usd",
+      },
+      true
+    );
+  }
 }
-
-
-

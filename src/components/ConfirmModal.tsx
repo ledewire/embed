@@ -3,6 +3,7 @@ import { useState } from "preact/hooks";
 interface ConfirmModalProps {
   onClose?: () => void;
   onConfirm?: () => Promise<void>;
+  onAddFunds?: () => void;
   balance: string;
   price: string;
 }
@@ -10,11 +11,17 @@ interface ConfirmModalProps {
 export function ConfirmModal({
   onClose,
   onConfirm,
+  onAddFunds,
   balance,
   price,
 }: ConfirmModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Check if user has sufficient funds
+  const balanceNum = parseFloat(balance);
+  const priceNum = parseFloat(price);
+  const hasSufficientFunds = balanceNum >= priceNum;
 
   const handlePurchase = async () => {
     if (!onConfirm) return;
@@ -88,13 +95,15 @@ export function ConfirmModal({
           ×
         </button>
 
-        {/* Success Alert */}
+        {/* Success/Warning Alert */}
         <div
           style={{
             display: "flex",
             gap: "12px",
-            background: "#FEF3C7",
-            border: "1px solid #FDE68A",
+            background: hasSufficientFunds ? "#FEF3C7" : "#FEE2E2",
+            border: hasSufficientFunds
+              ? "1px solid #FDE68A"
+              : "1px solid #FCA5A5",
             borderRadius: "8px",
             padding: "16px",
             marginBottom: "32px",
@@ -106,7 +115,7 @@ export function ConfirmModal({
               height="20"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#92400E"
+              stroke={hasSufficientFunds ? "#92400E" : "#991B1B"}
               strokeWidth="2"
             >
               <circle cx="12" cy="12" r="10"></circle>
@@ -119,20 +128,24 @@ export function ConfirmModal({
               style={{
                 fontSize: "15px",
                 fontWeight: "700",
-                color: "#78350F",
+                color: hasSufficientFunds ? "#78350F" : "#991B1B",
                 marginBottom: "4px",
               }}
             >
-              Ready to purchase!
+              {hasSufficientFunds
+                ? "Ready to purchase!"
+                : "Insufficient Funds"}
             </h3>
             <p
               style={{
                 fontSize: "14px",
-                color: "#92400E",
+                color: hasSufficientFunds ? "#92400E" : "#991B1B",
                 lineHeight: "1.5",
               }}
             >
-              You have sufficient funds in your wallet to purchase this content.
+              {hasSufficientFunds
+                ? "You have sufficient funds in your wallet to purchase this content."
+                : `You need $${(priceNum - balanceNum).toFixed(2)} more to complete this purchase.`}
             </p>
           </div>
         </div>
@@ -210,39 +223,96 @@ export function ConfirmModal({
           </div>
         )}
 
-        {/* Purchase Button */}
-        <button
-          onClick={handlePurchase}
-          disabled={isLoading}
-          style={{
-            width: "100%",
-            padding: "14px",
-            borderRadius: "6px",
-            border: "none",
-            background: isLoading ? "#9CA3AF" : "#4A7C9C",
-            color: "white",
-            fontSize: "15px",
-            fontWeight: "600",
-            cursor: isLoading ? "not-allowed" : "pointer",
-            transition: "all 0.2s",
-            marginBottom: "24px",
-            opacity: isLoading ? 0.7 : 1,
-          }}
-          onMouseOver={(e) => {
-            if (!isLoading) {
-              e.currentTarget.style.background = "#3D6883";
-              e.currentTarget.style.transform = "translateY(-1px)";
-            }
-          }}
-          onMouseOut={(e) => {
-            if (!isLoading) {
-              e.currentTarget.style.background = "#4A7C9C";
-              e.currentTarget.style.transform = "translateY(0)";
-            }
-          }}
-        >
-          {isLoading ? "Processing..." : "Purchase Article"}
-        </button>
+        {/* Action Buttons */}
+        {hasSufficientFunds ? (
+          <button
+            onClick={handlePurchase}
+            disabled={isLoading}
+            style={{
+              width: "100%",
+              padding: "14px",
+              borderRadius: "6px",
+              border: "none",
+              background: isLoading ? "#9CA3AF" : "#4A7C9C",
+              color: "white",
+              fontSize: "15px",
+              fontWeight: "600",
+              cursor: isLoading ? "not-allowed" : "pointer",
+              transition: "all 0.2s",
+              marginBottom: "24px",
+              opacity: isLoading ? 0.7 : 1,
+            }}
+            onMouseOver={(e) => {
+              if (!isLoading) {
+                e.currentTarget.style.background = "#3D6883";
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!isLoading) {
+                e.currentTarget.style.background = "#4A7C9C";
+                e.currentTarget.style.transform = "translateY(0)";
+              }
+            }}
+          >
+            {isLoading ? "Processing..." : "Purchase Article"}
+          </button>
+        ) : (
+          <div>
+            <button
+              onClick={onAddFunds}
+              style={{
+                width: "100%",
+                padding: "14px",
+                borderRadius: "6px",
+                border: "none",
+                background: "#10B981",
+                color: "white",
+                fontSize: "15px",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "all 0.2s",
+                marginBottom: "12px",
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = "#059669";
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = "#10B981";
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+            >
+              Add Funds to Wallet
+            </button>
+            <button
+              onClick={onClose}
+              style={{
+                width: "100%",
+                padding: "14px",
+                borderRadius: "6px",
+                border: "1px solid #D1D5DB",
+                background: "white",
+                color: "#6B7280",
+                fontSize: "15px",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "all 0.2s",
+                marginBottom: "24px",
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = "#F9FAFB";
+                e.currentTarget.style.borderColor = "#9CA3AF";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = "white";
+                e.currentTarget.style.borderColor = "#D1D5DB";
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
 
         {/* Footer */}
         <div

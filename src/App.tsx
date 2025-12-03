@@ -3,6 +3,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { Overlay } from "./components/Overlay";
 import { LoginModal } from "./components/LoginModal";
 import { ConfirmModal } from "./components/ConfirmModal";
+import { AddFundsModal } from "./components/AddFundsModal";
 import { AuthService } from "./services/authService";
 import { PurchaseService } from "./services/purchaseService";
 import "./style.css";
@@ -19,7 +20,7 @@ interface AppProps {
   onUnlock?: () => void;
 }
 
-type ModalState = "overlay" | "login" | "confirm" | "unlocked";
+type ModalState = "overlay" | "login" | "confirm" | "addFunds" | "unlocked";
 
 export function App({ config, onUnlock }: AppProps) {
   return (
@@ -30,7 +31,7 @@ export function App({ config, onUnlock }: AppProps) {
 }
 
 const AppContent = ({ config, onUnlock }: AppProps) => {
-  const { googleClientId, isLoading, error } = useConfig();
+  const { googleClientId, isLoading } = useConfig();
 
   const [modalState, setModalState] = useState<ModalState>("overlay");
   const [userBalance, setUserBalance] = useState("0.00");
@@ -90,6 +91,23 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
     setModalState("overlay");
   };
 
+  const handleAddFunds = () => {
+    setModalState("addFunds");
+  };
+
+  const handleAddFundsSuccess = async () => {
+    // Refresh wallet balance
+    try {
+      const balanceData = await PurchaseService.getWalletBalance();
+      const balanceInDollars = (balanceData.balance_cents / 100).toFixed(2);
+      setUserBalance(balanceInDollars);
+    } catch (error) {
+      // Failed to fetch balance
+    }
+    // Go back to confirm modal
+    setModalState("confirm");
+  };
+
   const handleConfirmPurchase = async () => {
     if (!config.contentId) {
       throw new Error("Content ID is required for purchase");
@@ -120,7 +138,6 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
   };
 
   if (modalState === "unlocked") return null;
-  console.log(googleClientId);
 
   if (isLoading) {
     return (
@@ -133,46 +150,51 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">Failed to load configuration</p>
-          <p className="text-gray-600 text-sm">{error}</p>
-        </div>
-      </div>
-    );
-  }
-  if (!googleClientId) return null;
-  console.log("generated id: ", googleClientId);
-  console.log("our id: ", import.meta.env.VITE_GOOGLE_CLIENT_ID);
+  // Use googleClientId if available, otherwise use a fallback
+  // Google OAuth will only work if a valid client ID is configured
+  const clientId =
+    googleClientId ||
+    import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+    "placeholder-client-id";
+
+  const appContent = (
+    <div className="ledewire-wrapper font-sans antialiased">
+      {modalState === "overlay" && (
+        <Overlay
+          price={config.price || "0.00"}
+          onPurchase={handlePurchaseClick}
+        />
+      )}
+
+      {modalState === "login" && (
+        <LoginModal
+          onClose={handleCloseModal}
+          onLoginSuccess={handleLoginSuccess}
+        />
+      )}
+
+      {modalState === "confirm" && (
+        <ConfirmModal
+          onClose={handleCloseModal}
+          onConfirm={handleConfirmPurchase}
+          onAddFunds={handleAddFunds}
+          balance={userBalance}
+          price={config.price || "0.00"}
+        />
+      )}
+
+      {modalState === "addFunds" && (
+        <AddFundsModal
+          onClose={() => setModalState("confirm")}
+          onSuccess={handleAddFundsSuccess}
+          requiredAmount={config.price || "0.00"}
+          currentBalance={userBalance}
+        />
+      )}
+    </div>
+  );
 
   return (
-    <GoogleOAuthProvider clientId={googleClientId}>
-      <div className="ledewire-wrapper font-sans antialiased">
-        {modalState === "overlay" && (
-          <Overlay
-            price={config.price || "0.00"}
-            onPurchase={handlePurchaseClick}
-          />
-        )}
-
-        {modalState === "login" && (
-          <LoginModal
-            onClose={handleCloseModal}
-            onLoginSuccess={handleLoginSuccess}
-          />
-        )}
-
-        {modalState === "confirm" && (
-          <ConfirmModal
-            onClose={handleCloseModal}
-            onConfirm={handleConfirmPurchase}
-            balance={userBalance}
-            price={config.price || "0.00"}
-          />
-        )}
-      </div>
-    </GoogleOAuthProvider>
+    <GoogleOAuthProvider clientId={clientId}>{appContent}</GoogleOAuthProvider>
   );
 };
