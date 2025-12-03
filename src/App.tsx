@@ -204,35 +204,32 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
           />
         )}
 
-      {modalState === "login" && (
-        <LoginModal
-          onClose={handleCloseModal}
-          onLoginSuccess={handleLoginSuccess}
-        />
-      )}
+        {modalState === "login" && (
+          <LoginModal
+            onClose={handleCloseModal}
+            onLoginSuccess={handleLoginSuccess}
+          />
+        )}
 
-      {modalState === "confirm" && (
-        <ConfirmModal
-          onClose={handleCloseModal}
-          onConfirm={handleConfirmPurchase}
-          onAddFunds={handleAddFunds}
-          balance={userBalance}
-          price={config.price || "0.00"}
-        />
-      )}
+        {modalState === "confirm" && (
+          <ConfirmModal
+            onClose={handleCloseModal}
+            onConfirm={handleConfirmPurchase}
+            onAddFunds={handleAddFunds}
+            balance={userBalance}
+            price={config.price || "0.00"}
+          />
+        )}
 
-      {modalState === "addFunds" && (
-        <AddFundsModal
-          onClose={() => setModalState("confirm")}
-          onSuccess={handleAddFundsSuccess}
-          requiredAmount={config.price || "0.00"}
-          currentBalance={userBalance}
-        />
-      )}
-    </div>
-  );
-
-  return (
-    <GoogleOAuthProvider clientId={clientId}>{appContent}</GoogleOAuthProvider>
+        {modalState === "addFunds" && (
+          <AddFundsModal
+            onClose={() => setModalState("confirm")}
+            onSuccess={handleAddFundsSuccess}
+            requiredAmount={config.price || "0.00"}
+            currentBalance={userBalance}
+          />
+        )}
+      </div>
+    </GoogleOAuthProvider>
   );
 };
