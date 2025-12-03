@@ -3,6 +3,20 @@ import { App } from "./App";
 import style from "./style.css?inline"; // Import CSS as inline string
 
 (function () {
+  function getVimeoVideoId() {
+    const iframe = document.querySelector(
+      "iframe[src*='player.vimeo.com/video']"
+    ) as HTMLIFrameElement | null;
+    if (!iframe) return null;
+
+    const src = iframe.src; // full URL
+
+    // Match the ID between /video/ and ?...
+    const match = src.match(/video\/([^?]+)/);
+
+    return match ? match[1] : null;
+  }
+
   function getScriptConfig() {
     const script =
       document.currentScript ||
@@ -12,8 +26,10 @@ import style from "./style.css?inline"; // Import CSS as inline string
       return {};
     }
 
+    const detectedVideoId = getVimeoVideoId();
     return {
-      contentId: script.dataset.contentId,
+      apiKey: script.dataset.apiKey,
+      contentId: detectedVideoId,
       price: script.dataset.price,
       creatorId: script.dataset.creatorId,
       playerType: script.dataset.player,

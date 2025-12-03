@@ -11,6 +11,7 @@ import { ConfigProvider, useConfig } from "./contexts/ConfigContext";
 interface AppProps {
   config: {
     price: string;
+    apiKey?: string;
     contentId?: string;
     creatorId?: string;
     playerType?: string;
@@ -23,7 +24,7 @@ type ModalState = "overlay" | "login" | "confirm" | "unlocked";
 
 export function App({ config, onUnlock }: AppProps) {
   return (
-    <ConfigProvider>
+    <ConfigProvider apiKey={config.apiKey || ""}>
       <AppContent config={config} onUnlock={onUnlock} />
     </ConfigProvider>
   );
@@ -31,6 +32,8 @@ export function App({ config, onUnlock }: AppProps) {
 
 const AppContent = ({ config, onUnlock }: AppProps) => {
   const { googleClientId, isLoading, error } = useConfig();
+  const [isPurchased, setIsPurchased] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const [modalState, setModalState] = useState<ModalState>("overlay");
   const [userBalance, setUserBalance] = useState("0.00");
@@ -40,8 +43,18 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
     const checkAuth = async () => {
       try {
         const isAuth = await AuthService.ensureAuthenticated();
+        const isPurchased = await PurchaseService.verifyPurchase(
+          config.contentId || ""
+        );
+
+        if (isPurchased.has_purchased) {
+          setIsPurchased(isPurchased.has_purchased);
+          setModalState("unlocked");
+          return;
+        }
         if (isAuth) {
           // Fetch wallet balance if authenticated
+          setIsAuthenticated(isAuth);
           try {
             const balanceData = await PurchaseService.getWalletBalance();
             const balanceInDollars = (balanceData.balance_cents / 100).toFixed(
@@ -63,12 +76,22 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
     // Check authentication and refresh token if needed
     try {
       const isLoggedIn = await AuthService.ensureAuthenticated();
+      const isPurchasedRes = await PurchaseService.verifyPurchase(
+        config.contentId || ""
+      );
+
+      if (isPurchasedRes?.has_purchased) {
+        setIsPurchased(isPurchasedRes?.has_purchased);
+        setModalState("unlocked");
+        return;
+      }
 
       if (isLoggedIn) {
         setModalState("confirm");
-      } else {
-        setModalState("login");
+        return;
       }
+
+      setModalState("login");
     } catch (error) {
       setModalState("login");
     }
@@ -78,8 +101,17 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
     // Fetch wallet balance after successful login
     try {
       const balanceData = await PurchaseService.getWalletBalance();
+      const isPurchasedRes = await PurchaseService.verifyPurchase(
+        config.contentId || ""
+      );
       const balanceInDollars = (balanceData.balance_cents / 100).toFixed(2);
+
       setUserBalance(balanceInDollars);
+
+      if (isPurchasedRes.has_purchased) {
+        setModalState("unlocked");
+        return;
+      }
     } catch (error) {
       // Failed to fetch balance, keep default
     }
@@ -96,7 +128,7 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
     }
 
     // Convert price from string to cents
-    const priceCents = Math.round(parseFloat(config.price || "0") * 100);
+    const priceCents = Math.round(+config.price);
 
     // Call purchase API
     await PurchaseService.purchaseContent(config.contentId, priceCents);
@@ -120,7 +152,6 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
   };
 
   if (modalState === "unlocked") return null;
-  console.log(googleClientId);
 
   if (isLoading) {
     return (
@@ -144,8 +175,6 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
     );
   }
   if (!googleClientId) return null;
-  console.log("generated id: ", googleClientId);
-  console.log("our id: ", import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
   return (
     <GoogleOAuthProvider clientId={googleClientId}>

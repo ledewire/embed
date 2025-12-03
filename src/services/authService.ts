@@ -64,19 +64,14 @@ export class AuthService {
     console.log(response);
   }
 
-  static async authenticateSeller() {
-    const apiKey = import.meta.env.VITE_API_KEY;
-    const apiSecret =
-      import.meta.env.VITE_API_SECRET ?? import.meta.env.VITE_APT_SECRET;
-
-    if (!apiKey || !apiSecret) {
-      throw new Error(
-        "Missing VITE_API_KEY or VITE_API_SECRET (or VITE_APT_SECRET) in environment."
-      );
+  static async authenticateSeller(apiKey: string) {
+    if (!apiKey) {
+      console.error("Missing API_KEY");
+      throw new Error("Missing API_KEY");
     }
 
     const url = "http://localhost:8010/auth/login/api-key";
-    const payload = { key: apiKey, secret: apiSecret };
+    const payload = { key: apiKey };
 
     // use axios.post with generic for typed response
     const response: AxiosResponse<{
@@ -104,17 +99,14 @@ export class AuthService {
     if (!response.data || typeof response.data.access_token !== "string") {
       throw new Error("Auth response missing accessToken");
     }
-    console.log(response.data);
 
     return response.data.access_token;
   }
 
-  static async getConfig(): Promise<IConfigResponse> {
+  static async getConfig(apiKey: string): Promise<IConfigResponse> {
     try {
-      const sellerAccessToken = await this.authenticateSeller();
+      const sellerAccessToken = await this.authenticateSeller(apiKey);
 
-      console.log("hi");
-      console.log(sellerAccessToken);
       const configResponse = await axios.get(
         "http://localhost:8010/seller/config",
         {

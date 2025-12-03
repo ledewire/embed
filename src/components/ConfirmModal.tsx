@@ -15,7 +15,6 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const handlePurchase = async () => {
     if (!onConfirm) return;
 
@@ -25,9 +24,7 @@ export function ConfirmModal({
     try {
       await onConfirm();
     } catch (err: any) {
-      setError(
-        err.message || "Failed to complete purchase. Please try again."
-      );
+      setError(err.message || "Failed to complete purchase. Please try again.");
       setIsLoading(false);
     }
   };

@@ -16,12 +16,10 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
   // Google login handler (not implemented yet)
   const handleGoogleSuccess = async (credentialResponse: any) => {
     setError("Google login is not yet implemented");
-    console.log(credentialResponse);
     try {
       const response = await AuthService.loginWithGoogle(
         credentialResponse.credential
       );
-      console.log(response);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Google login failed";
