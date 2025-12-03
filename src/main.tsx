@@ -20,7 +20,7 @@ import style from "./style.css?inline"; // Import CSS as inline string
   function getScriptConfig() {
     const script =
       document.currentScript ||
-      document.querySelector("script[data-content-id]");
+      document.querySelector("script[data-api-key]");
 
     if (!script || !(script instanceof HTMLScriptElement)) {
       return {};
