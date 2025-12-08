@@ -45,28 +45,33 @@ export class AuthService {
   /**
    * Login with Google OAuth
    */
-  static async loginWithGoogle(idToken: string): Promise<AuthTokens> {
-    const response = await ApiClient.post<AuthTokens>("/auth/login/google", {
-      id_token: idToken,
-    });
+  static async loginWithGoogle(idToken: string): Promise<void> {
+    const config = {
+      method: "POST",
+      url: "https://api-staging.ledewire.com/v1/auth/login/google",
+      data: JSON.stringify({
+        id_token: idToken,
+      }),
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      // Don't throw on HTTP error status codes - we'll handle them manually
+      validateStatus: () => true,
+    };
 
-    TokenManager.setTokens(response);
-    return response;
+    const response = await axios(config);
+
+    console.log(response);
   }
 
-  static async authenticateSeller() {
-    const apiKey = import.meta.env.VITE_API_KEY;
-    const apiSecret =
-      import.meta.env.VITE_API_SECRET ?? import.meta.env.VITE_APT_SECRET;
-
-    if (!apiKey || !apiSecret) {
-      throw new Error(
-        "Missing VITE_API_KEY or VITE_API_SECRET (or VITE_APT_SECRET) in environment."
-      );
+  static async authenticateSeller(apiKey: string) {
+    if (!apiKey) {
+      console.error("Missing API_KEY");
+      throw new Error("Missing API_KEY");
     }
 
     const url = "http://localhost:8010/auth/login/api-key";
-    const payload = { key: apiKey, secret: apiSecret };
+    const payload = { key: apiKey };
 
     // use axios.post with generic for typed response
     const response: AxiosResponse<{
@@ -92,35 +97,38 @@ export class AuthService {
     }
 
     if (!response.data || typeof response.data.access_token !== "string") {
-      throw new Error("Auth response missing access_token");
+      throw new Error("Auth response missing accessToken");
     }
 
     return response.data.access_token;
   }
 
-  static async getConfig(): Promise<IConfigResponse> {
-    const sellerAccessToken = await this.authenticateSeller();
+  static async getConfig(apiKey: string): Promise<IConfigResponse> {
+    try {
+      const sellerAccessToken = await this.authenticateSeller(apiKey);
 
-    const configResponse = await axios.get(
-      "http://localhost:8010/seller/config",
-      {
-        headers: {
-          Authorization: `Bearer ${sellerAccessToken}`,
-          "Content-Type": "application/json",
-        },
-        validateStatus: () => true,
-      }
-    );
-
-    if (configResponse.status !== 200) {
-      throw new Error(
-        `Failed to load seller config (status ${configResponse.status}): ${
-          JSON.stringify(configResponse.data)
-        }`
+      const configResponse = await axios.get(
+        "http://localhost:8010/seller/config",
+        {
+          headers: {
+            Authorization: `Bearer ${sellerAccessToken}`,
+            "Content-Type": "application/json",
+          },
+          validateStatus: () => true, // handle errors manually
+        }
       );
-    }
 
-    return configResponse.data;
+      if (configResponse.status !== 200) {
+        throw new Error(
+          `Failed to load seller config (status ${configResponse.status}): ` +
+            JSON.stringify(configResponse.data)
+        );
+      }
+
+      return configResponse.data;
+    } catch (error) {
+      throw error;
+    }
   }
 
   /**
