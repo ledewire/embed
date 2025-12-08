@@ -69,5 +69,3 @@ export function AlreadyPurchasedModal() {
     </div>
   );
 }
-
-
