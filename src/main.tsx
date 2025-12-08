@@ -3,33 +3,17 @@ import { App } from "./App";
 import style from "./style.css?inline"; // Import CSS as inline string
 
 (function () {
-  function getVimeoVideoId() {
-    const iframe = document.querySelector(
-      "iframe[src*='player.vimeo.com/video']"
-    ) as HTMLIFrameElement | null;
-    if (!iframe) return null;
-
-    const src = iframe.src; // full URL
-
-    // Match the ID between /video/ and ?...
-    const match = src.match(/video\/([^?]+)/);
-
-    return match ? match[1] : null;
-  }
-
   function getScriptConfig() {
     const script =
       document.currentScript ||
-      document.querySelector("script[data-api-key]");
+      document.querySelector("script[data-content-id]");
 
     if (!script || !(script instanceof HTMLScriptElement)) {
       return {};
     }
 
-    const detectedVideoId = getVimeoVideoId();
     return {
-      apiKey: script.dataset.apiKey,
-      contentId: detectedVideoId,
+      contentId: script.dataset.contentId,
       price: script.dataset.price,
       creatorId: script.dataset.creatorId,
       playerType: script.dataset.player,
@@ -134,7 +118,16 @@ import style from "./style.css?inline"; // Import CSS as inline string
 
   // Render Preact app with playVideo callback
   render(
-    <App config={config as any} onUnlock={() => playVideo(videoEl)} />,
+    <App
+      config={config as any}
+      onUnlock={() => {
+        playVideo(videoEl);
+        // Remove overlay container to allow video interaction
+        setTimeout(() => {
+          container.remove();
+        }, 300);
+      }}
+    />,
     appRoot
   );
 })();

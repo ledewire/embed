@@ -10,7 +10,7 @@ const https = require('https');
 const url = require('url');
 
 const PORT = 8010;
-const TARGET = 'https://api.ledewire.com/v1';
+const TARGET = 'https://api-staging.ledewire.com/v1';
 
 const server = http.createServer((req, res) => {
   // Set CORS headers
@@ -37,7 +37,6 @@ const server = http.createServer((req, res) => {
     method: req.method,
     headers: {
       ...req.headers,
-      host: 'api.ledewire.com',
     },
   };
 
@@ -48,11 +47,27 @@ const server = http.createServer((req, res) => {
 
   // Make the proxy request
   const proxyReq = https.request(targetUrl, options, (proxyRes) => {
-    // Forward status code
-    res.writeHead(proxyRes.statusCode, proxyRes.headers);
-
-    // Forward response body
-    proxyRes.pipe(res);
+    console.log(`📥 Response: ${proxyRes.statusCode} ${proxyRes.statusMessage}`);
+    
+    // Collect response body for logging and forwarding
+    let responseBody = Buffer.from([]);
+    proxyRes.on('data', (chunk) => {
+      responseBody = Buffer.concat([responseBody, chunk]);
+    });
+    
+    proxyRes.on('end', () => {
+      const bodyStr = responseBody.toString();
+      if (proxyRes.statusCode >= 400) {
+        console.error('❌ Error Response:', bodyStr);
+      } else {
+        console.log('✅ Success Response:', bodyStr.substring(0, 200));
+      }
+      
+      // Forward status code
+      res.writeHead(proxyRes.statusCode, proxyRes.headers);
+      // Forward response body
+      res.end(responseBody);
+    });
   });
 
   // Handle errors
@@ -62,8 +77,22 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({ error: 'Proxy error: ' + err.message }));
   });
 
-  // Forward request body
-  req.pipe(proxyReq);
+  // Forward request body and log it for debugging
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    let requestBody = Buffer.from([]);
+    req.on('data', (chunk) => {
+      requestBody = Buffer.concat([requestBody, chunk]);
+    });
+    req.on('end', () => {
+      const bodyStr = requestBody.toString();
+      if (bodyStr) {
+        console.log('📤 Request Body:', bodyStr);
+      }
+      proxyReq.end(requestBody);
+    });
+  } else {
+    req.pipe(proxyReq);
+  }
 });
 
 server.listen(PORT, () => {
