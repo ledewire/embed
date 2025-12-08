@@ -4,10 +4,11 @@ import { Overlay } from "./components/Overlay";
 import { LoginModal } from "./components/LoginModal";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { AddFundsModal } from "./components/AddFundsModal";
+import { AlreadyPurchasedModal } from "./components/AlreadyPurchasedModal";
 import { AuthService } from "./services/authService";
 import { PurchaseService } from "./services/purchaseService";
-import "./style.css";
 import { ConfigProvider, useConfig } from "./contexts/ConfigContext";
+import "./style.css";
 
 interface AppProps {
   config: {
@@ -20,7 +21,7 @@ interface AppProps {
   onUnlock?: () => void;
 }
 
-type ModalState = "overlay" | "login" | "confirm" | "addFunds" | "unlocked";
+type ModalState = "overlay" | "login" | "confirm" | "addFunds" | "alreadyPurchased" | "unlocked";
 
 export function App({ config, onUnlock }: AppProps) {
   return (
@@ -32,32 +33,60 @@ export function App({ config, onUnlock }: AppProps) {
 
 const AppContent = ({ config, onUnlock }: AppProps) => {
   const { googleClientId, isLoading } = useConfig();
-
   const [modalState, setModalState] = useState<ModalState>("overlay");
   const [userBalance, setUserBalance] = useState("0.00");
 
-  // Check if user is already logged in on mount and refresh token if needed
+  // Helper to unlock content
+  const unlockContent = (delay = 100) => {
+    setModalState("unlocked");
+    if (onUnlock) {
+      setTimeout(() => onUnlock(), delay);
+    }
+  };
+
+  // Helper to fetch and update balance
+  const updateBalance = async () => {
+    try {
+      const balanceData = await PurchaseService.getWalletBalance();
+      setUserBalance((balanceData.balance_cents / 100).toFixed(2));
+    } catch (error) {
+      // Silent fail - balance stays at default
+    }
+  };
+
+  // Helper to check if content is already purchased
+  const checkAlreadyPurchased = async (): Promise<boolean> => {
+    if (!config.contentId) return false;
+    
+    try {
+      const { has_purchased } = await PurchaseService.verifyPurchase(config.contentId);
+      return has_purchased;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  // Check authentication and purchase status on mount
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const isAuth = await AuthService.ensureAuthenticated();
-        if (isAuth) {
-          // Fetch wallet balance if authenticated
-          try {
-            const balanceData = await PurchaseService.getWalletBalance();
-            const balanceInDollars = (balanceData.balance_cents / 100).toFixed(
-              2
-            );
-            setUserBalance(balanceInDollars);
-          } catch (error) {
-            // Failed to fetch balance, keep default
-          }
+        if (!isAuth) return;
+
+        // Check if already purchased
+        if (await checkAlreadyPurchased()) {
+          unlockContent();
+          return;
         }
+
+        // Fetch wallet balance
+        await updateBalance();
       } catch (error) {
-        // Token refresh failed, user will need to login again
+        // Silent fail - user will login if needed
       }
     };
     checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handlePurchaseClick = async () => {
@@ -76,14 +105,15 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
   };
 
   const handleLoginSuccess = async () => {
-    // Fetch wallet balance after successful login
-    try {
-      const balanceData = await PurchaseService.getWalletBalance();
-      const balanceInDollars = (balanceData.balance_cents / 100).toFixed(2);
-      setUserBalance(balanceInDollars);
-    } catch (error) {
-      // Failed to fetch balance, keep default
+    // Check if already purchased
+    if (await checkAlreadyPurchased()) {
+      setModalState("alreadyPurchased");
+      setTimeout(() => unlockContent(), 2000);
+      return;
     }
+
+    // Fetch balance and show confirm modal
+    await updateBalance();
     setModalState("confirm");
   };
 
@@ -96,15 +126,7 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
   };
 
   const handleAddFundsSuccess = async () => {
-    // Refresh wallet balance
-    try {
-      const balanceData = await PurchaseService.getWalletBalance();
-      const balanceInDollars = (balanceData.balance_cents / 100).toFixed(2);
-      setUserBalance(balanceInDollars);
-    } catch (error) {
-      // Failed to fetch balance
-    }
-    // Go back to confirm modal
+    await updateBalance();
     setModalState("confirm");
   };
 
@@ -113,27 +135,20 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
       throw new Error("Content ID is required for purchase");
     }
 
-    // Convert price from string to cents
     const priceCents = Math.round(parseFloat(config.price || "0") * 100);
 
-    // Call purchase API
-    await PurchaseService.purchaseContent(config.contentId, priceCents);
-
-    // Update balance after successful purchase
     try {
-      const balanceData = await PurchaseService.getWalletBalance();
-      const balanceInDollars = (balanceData.balance_cents / 100).toFixed(2);
-      setUserBalance(balanceInDollars);
-    } catch (error) {
-      // Failed to fetch balance
-    }
-
-    setModalState("unlocked");
-
-    if (onUnlock) {
-      setTimeout(() => {
-        onUnlock();
-      }, 100);
+      await PurchaseService.purchaseContent(config.contentId, priceCents);
+      await updateBalance();
+      unlockContent();
+    } catch (error: any) {
+      // Handle "already purchased" error
+      if (error.message?.toLowerCase().includes("already purchased")) {
+        setModalState("alreadyPurchased");
+        setTimeout(() => unlockContent(), 2000);
+      } else {
+        throw error;
+      }
     }
   };
 
@@ -191,6 +206,8 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
           currentBalance={userBalance}
         />
       )}
+
+      {modalState === "alreadyPurchased" && <AlreadyPurchasedModal />}
     </div>
   );
 

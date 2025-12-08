@@ -36,7 +36,6 @@ export function ConfigProvider({ children }: IConfigProviderProps) {
 
         // Otherwise fetch from API
         const config = await AuthService.getConfig();
-        console.log(config);
         setGoogleClientId(config.google_client_id);
       } catch (err) {
         setError(

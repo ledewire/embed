@@ -118,7 +118,16 @@ import style from "./style.css?inline"; // Import CSS as inline string
 
   // Render Preact app with playVideo callback
   render(
-    <App config={config as any} onUnlock={() => playVideo(videoEl)} />,
+    <App
+      config={config as any}
+      onUnlock={() => {
+        playVideo(videoEl);
+        // Remove overlay container to allow video interaction
+        setTimeout(() => {
+          container.remove();
+        }, 300);
+      }}
+    />,
     appRoot
   );
 })();
