@@ -12,7 +12,7 @@ import "./style.css";
 
 interface AppProps {
   config: {
-    price: string;
+    apiKey?: string;
     contentId?: string;
     creatorId?: string;
     playerType?: string;
@@ -31,7 +31,7 @@ type ModalState =
 
 export function App({ config, onUnlock }: AppProps) {
   return (
-    <ConfigProvider>
+    <ConfigProvider apiKey={config.apiKey || ""}>
       <AppContent config={config} onUnlock={onUnlock} />
     </ConfigProvider>
   );
@@ -41,6 +41,7 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
   const { googleClientId, isLoading } = useConfig();
   const [modalState, setModalState] = useState<ModalState>("overlay");
   const [userBalance, setUserBalance] = useState("0.00");
+  const [contentPrice, setContentPrice] = useState(0);
 
   // Helper to unlock content
   const unlockContent = (delay = 100) => {
@@ -93,6 +94,14 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
         // Silent fail - user will login if needed
       }
     };
+
+    const getPrice = async () => {
+      const price = await AuthService.getDynamicPricing(config.contentId || "");
+
+      //conversion to dollar as we are getting price in cents
+      setContentPrice(price.price_cents);
+    };
+    getPrice();
     checkAuth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -143,7 +152,7 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
       throw new Error("Content ID is required for purchase");
     }
 
-    const priceCents = Math.round(parseFloat(config.price || "0") * 100);
+    const priceCents = Math.round(+contentPrice);
 
     try {
       await PurchaseService.purchaseContent(config.contentId, priceCents);
@@ -184,7 +193,7 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
     <div className="ledewire-wrapper font-sans antialiased">
       {modalState === "overlay" && (
         <Overlay
-          price={config.price || "0.00"}
+          price={contentPrice.toString() || "0.00"}
           onPurchase={handlePurchaseClick}
         />
       )}
@@ -202,7 +211,7 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
           onConfirm={handleConfirmPurchase}
           onAddFunds={handleAddFunds}
           balance={userBalance}
-          price={config.price || "0.00"}
+          price={contentPrice.toString() || "0.00"}
         />
       )}
 
@@ -210,7 +219,7 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
         <AddFundsModal
           onClose={() => setModalState("confirm")}
           onSuccess={handleAddFundsSuccess}
-          requiredAmount={config.price || "0.00"}
+          requiredAmount={contentPrice.toString() || "0.00"}
           currentBalance={userBalance}
         />
       )}

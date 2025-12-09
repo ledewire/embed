@@ -15,6 +15,7 @@ export class TokenManager {
     ACCESS_TOKEN: "access_token",
     REFRESH_TOKEN: "refresh_token",
     EXPIRES_AT: "expires_at",
+    SELLER_TOKEN: "seller_token",
   };
 
   /**
@@ -24,6 +25,14 @@ export class TokenManager {
     localStorage.setItem(this.STORAGE_KEYS.ACCESS_TOKEN, tokens.access_token);
     localStorage.setItem(this.STORAGE_KEYS.REFRESH_TOKEN, tokens.refresh_token);
     localStorage.setItem(this.STORAGE_KEYS.EXPIRES_AT, tokens.expires_at);
+  }
+
+  static setSellerToken(seller_token: string) {
+    localStorage.setItem(this.STORAGE_KEYS.SELLER_TOKEN, seller_token);
+  }
+
+  static getSellerToken(): string | null {
+    return localStorage.getItem(this.STORAGE_KEYS.SELLER_TOKEN);
   }
 
   /**

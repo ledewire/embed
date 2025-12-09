@@ -19,8 +19,7 @@ import style from "./style.css?inline"; // Import CSS as inline string
 
   function getScriptConfig() {
     const script =
-      document.currentScript ||
-      document.querySelector("script[data-content-id]");
+      document.currentScript || document.querySelector("script[data-api-key]");
 
     if (!script || !(script instanceof HTMLScriptElement)) {
       return {};
@@ -28,8 +27,8 @@ import style from "./style.css?inline"; // Import CSS as inline string
 
     const detectedVideoId = getVimeoVideoId();
     return {
-      contentId: script.dataset.contentId || detectedVideoId,
-      price: script.dataset.price,
+      apiKey: script.dataset.apiKey,
+      contentId: "972e539f-effd-4bd3-b550-0b94b421118f" || detectedVideoId,
       creatorId: script.dataset.creatorId,
       playerType: script.dataset.player,
       autoplay: script.dataset.autoplay === "true",

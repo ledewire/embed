@@ -25,6 +25,9 @@ interface IConfigResponse {
   google_client_id: string;
 }
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "https://api.ledewire.com/v1";
+
 export class AuthService {
   /**
    * Login with email and password
@@ -45,27 +48,35 @@ export class AuthService {
   /**
    * Login with Google OAuth
    */
-  static async loginWithGoogle(idToken: string): Promise<AuthTokens> {
-    const response = await ApiClient.post<AuthTokens>("/auth/login/google", {
-      id_token: idToken,
-    });
+  /**
+   * Login with Google OAuth
+   */
+  static async loginWithGoogle(idToken: string): Promise<void> {
+    const config = {
+      method: "POST",
+      url: `${API_BASE_URL}/auth/login/google`,
+      data: JSON.stringify({
+        id_token: idToken,
+      }),
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      // Don't throw on HTTP error status codes - we'll handle them manually
+      validateStatus: () => true,
+    };
 
-    TokenManager.setTokens(response);
-    return response;
+    const response = await axios(config);
+
+    console.log(response);
   }
 
-  static async authenticateSeller() {
-    const apiKey = import.meta.env.VITE_API_KEY;
-    const apiSecret =
-      import.meta.env.VITE_API_SECRET ?? import.meta.env.VITE_APT_SECRET;
-
-    if (!apiKey || !apiSecret) {
-      throw new Error(
-        "Missing VITE_API_KEY or VITE_API_SECRET (or VITE_APT_SECRET) in environment."
-      );
+  static async authenticateSeller(apiKey: string) {
+    if (!apiKey) {
+      console.error("Missing API_KEY");
+      throw new Error("Missing API_KEY");
     }
 
-    const url = "http://localhost:8010/auth/login/api-key";
+    const url = `${API_BASE_URL}/auth/login/api-key`;
     const payload = { key: apiKey };
 
     // use axios.post with generic for typed response
@@ -92,35 +103,55 @@ export class AuthService {
     }
 
     if (!response.data || typeof response.data.access_token !== "string") {
-      throw new Error("Auth response missing access_token");
+      throw new Error("Auth response missing accessToken");
     }
+    TokenManager.setSellerToken(response.data.access_token);
 
     return response.data.access_token;
   }
 
-  static async getConfig(): Promise<IConfigResponse> {
-    const sellerAccessToken = await this.authenticateSeller();
+  static async getConfig(apiKey: string): Promise<IConfigResponse> {
+    try {
+      const sellerAccessToken = await this.authenticateSeller(apiKey);
 
-    const configResponse = await axios.get(
-      "http://localhost:8010/seller/config",
-      {
+      const configResponse = await axios.get(`${API_BASE_URL}/seller/config`, {
         headers: {
           Authorization: `Bearer ${sellerAccessToken}`,
           "Content-Type": "application/json",
         },
-        validateStatus: () => true,
+        validateStatus: () => true, // handle errors manually
+      });
+
+      if (configResponse.status !== 200) {
+        throw new Error(
+          `Failed to load seller config (status ${configResponse.status}): ` +
+            JSON.stringify(configResponse.data)
+        );
       }
-    );
 
-    if (configResponse.status !== 200) {
-      throw new Error(
-        `Failed to load seller config (status ${
-          configResponse.status
-        }): ${JSON.stringify(configResponse.data)}`
-      );
+      return configResponse.data;
+    } catch (error) {
+      throw error;
     }
+  }
 
-    return configResponse.data;
+  static async getDynamicPricing(
+    contentId: string
+  ): Promise<{ price_cents: number }> {
+    const seller_token = TokenManager.getSellerToken();
+    const response: AxiosResponse<{ price_cents: number }> = await axios.get<{
+      price_cents: number;
+    }>(`${API_BASE_URL}/content/${contentId}/with-access`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${seller_token}`,
+      },
+      // We'll handle non-2xx statuses manually below
+      validateStatus: () => true,
+      timeout: 10_000,
+    });
+
+    return response.data;
   }
 
   /**
