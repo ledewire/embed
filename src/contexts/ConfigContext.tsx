@@ -13,10 +13,9 @@ const ConfigContext = createContext<IConfigContextValue | undefined>(undefined);
 
 interface IConfigProviderProps {
   children: ComponentChildren;
-  apiKey: string;
 }
 
-export function ConfigProvider({ children, apiKey }: IConfigProviderProps) {
+export function ConfigProvider({ children }: IConfigProviderProps) {
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +35,7 @@ export function ConfigProvider({ children, apiKey }: IConfigProviderProps) {
         }
 
         // Otherwise fetch from API
-        const config = await AuthService.getConfig(apiKey);
+        const config = await AuthService.getConfig();
         setGoogleClientId(config.google_client_id);
       } catch (err) {
         setError(

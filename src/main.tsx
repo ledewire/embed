@@ -20,7 +20,7 @@ import style from "./style.css?inline"; // Import CSS as inline string
   function getScriptConfig() {
     const script =
       document.currentScript ||
-      document.querySelector("script[data-api-key]");
+      document.querySelector("script[data-content-id]");
 
     if (!script || !(script instanceof HTMLScriptElement)) {
       return {};
@@ -28,8 +28,7 @@ import style from "./style.css?inline"; // Import CSS as inline string
 
     const detectedVideoId = getVimeoVideoId();
     return {
-      apiKey: script.dataset.apiKey,
-      contentId: detectedVideoId,
+      contentId: script.dataset.contentId || detectedVideoId,
       price: script.dataset.price,
       creatorId: script.dataset.creatorId,
       playerType: script.dataset.player,
@@ -56,11 +55,11 @@ import style from "./style.css?inline"; // Import CSS as inline string
       const pauseCmd = JSON.stringify({ method: "pause" });
 
       // Send immediately
-      iframe.contentWindow?.postMessage(pauseCmd, "*");
+      iframe.contentWindow?.postMessage(pauseCmd, "https://player.vimeo.com");
 
       // And retry a few times in case player is loading
       const interval = setInterval(() => {
-        iframe.contentWindow?.postMessage(pauseCmd, "*");
+        iframe.contentWindow?.postMessage(pauseCmd, "https://player.vimeo.com");
       }, 500);
 
       // Clear interval after 5 seconds
@@ -78,7 +77,7 @@ import style from "./style.css?inline"; // Import CSS as inline string
     if (videoEl.tagName === "IFRAME") {
       const iframe = videoEl as HTMLIFrameElement;
       const playCmd = JSON.stringify({ method: "play" });
-      iframe.contentWindow?.postMessage(playCmd, "*");
+      iframe.contentWindow?.postMessage(playCmd, "https://player.vimeo.com");
     } else if (videoEl.tagName === "VIDEO") {
       (videoEl as HTMLVideoElement).play();
     }
@@ -134,7 +133,16 @@ import style from "./style.css?inline"; // Import CSS as inline string
 
   // Render Preact app with playVideo callback
   render(
-    <App config={config as any} onUnlock={() => playVideo(videoEl)} />,
+    <App
+      config={config as any}
+      onUnlock={() => {
+        playVideo(videoEl);
+        // Remove overlay container to allow video interaction
+        setTimeout(() => {
+          container.remove();
+        }, 300);
+      }}
+    />,
     appRoot
   );
 })();

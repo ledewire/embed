@@ -4,15 +4,15 @@ import { Overlay } from "./components/Overlay";
 import { LoginModal } from "./components/LoginModal";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { AddFundsModal } from "./components/AddFundsModal";
+import { AlreadyPurchasedModal } from "./components/AlreadyPurchasedModal";
 import { AuthService } from "./services/authService";
 import { PurchaseService } from "./services/purchaseService";
-import "./style.css";
 import { ConfigProvider, useConfig } from "./contexts/ConfigContext";
+import "./style.css";
 
 interface AppProps {
   config: {
     price: string;
-    apiKey?: string;
     contentId?: string;
     creatorId?: string;
     playerType?: string;
@@ -21,101 +21,107 @@ interface AppProps {
   onUnlock?: () => void;
 }
 
-type ModalState = "overlay" | "login" | "confirm" | "addFunds" | "unlocked";
+type ModalState =
+  | "overlay"
+  | "login"
+  | "confirm"
+  | "addFunds"
+  | "alreadyPurchased"
+  | "unlocked";
 
 export function App({ config, onUnlock }: AppProps) {
   return (
-    <ConfigProvider apiKey={config.apiKey || ""}>
+    <ConfigProvider>
       <AppContent config={config} onUnlock={onUnlock} />
     </ConfigProvider>
   );
 }
 
 const AppContent = ({ config, onUnlock }: AppProps) => {
-  const { googleClientId, isLoading, error } = useConfig();
-  const [isPurchased, setIsPurchased] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
+  const { googleClientId, isLoading } = useConfig();
   const [modalState, setModalState] = useState<ModalState>("overlay");
   const [userBalance, setUserBalance] = useState("0.00");
 
-  // Check if user is already logged in on mount and refresh token if needed
+  // Helper to unlock content
+  const unlockContent = (delay = 100) => {
+    setModalState("unlocked");
+    if (onUnlock) {
+      setTimeout(() => onUnlock(), delay);
+    }
+  };
+
+  // Helper to fetch and update balance
+  const updateBalance = async () => {
+    try {
+      const balanceData = await PurchaseService.getWalletBalance();
+      setUserBalance((balanceData.balance_cents / 100).toFixed(2));
+    } catch (error) {
+      // Silent fail - balance stays at default
+    }
+  };
+
+  // Helper to check if content is already purchased
+  const checkAlreadyPurchased = async (): Promise<boolean> => {
+    if (!config.contentId) return false;
+
+    try {
+      const { has_purchased } = await PurchaseService.verifyPurchase(
+        config.contentId
+      );
+      return has_purchased;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  // Check authentication and purchase status on mount
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const isAuth = await AuthService.ensureAuthenticated();
-        const isPurchased = await PurchaseService.verifyPurchase(
-          config.contentId || ""
-        );
+        if (!isAuth) return;
 
-        if (isPurchased.has_purchased) {
-          setIsPurchased(isPurchased.has_purchased);
-          setModalState("unlocked");
+        // Check if already purchased
+        if (await checkAlreadyPurchased()) {
+          unlockContent();
           return;
         }
-        if (isAuth) {
-          // Fetch wallet balance if authenticated
-          setIsAuthenticated(isAuth);
-          try {
-            const balanceData = await PurchaseService.getWalletBalance();
-            const balanceInDollars = (balanceData.balance_cents / 100).toFixed(
-              2
-            );
-            setUserBalance(balanceInDollars);
-          } catch (error) {
-            // Failed to fetch balance, keep default
-          }
-        }
+
+        // Fetch wallet balance
+        await updateBalance();
       } catch (error) {
-        // Token refresh failed, user will need to login again
+        // Silent fail - user will login if needed
       }
     };
     checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handlePurchaseClick = async () => {
     // Check authentication and refresh token if needed
     try {
       const isLoggedIn = await AuthService.ensureAuthenticated();
-      const isPurchasedRes = await PurchaseService.verifyPurchase(
-        config.contentId || ""
-      );
-
-      if (isPurchasedRes?.has_purchased) {
-        setIsPurchased(isPurchasedRes?.has_purchased);
-        setModalState("unlocked");
-        return;
-      }
 
       if (isLoggedIn) {
         setModalState("confirm");
-        return;
+      } else {
+        setModalState("login");
       }
-
-      setModalState("login");
     } catch (error) {
       setModalState("login");
     }
   };
 
   const handleLoginSuccess = async () => {
-    // Fetch wallet balance after successful login
-    try {
-      const balanceData = await PurchaseService.getWalletBalance();
-      const isPurchasedRes = await PurchaseService.verifyPurchase(
-        config.contentId || ""
-      );
-      const balanceInDollars = (balanceData.balance_cents / 100).toFixed(2);
-
-      setUserBalance(balanceInDollars);
-
-      if (isPurchasedRes.has_purchased) {
-        setModalState("unlocked");
-        return;
-      }
-    } catch (error) {
-      // Failed to fetch balance, keep default
+    // Check if already purchased
+    if (await checkAlreadyPurchased()) {
+      setModalState("alreadyPurchased");
+      setTimeout(() => unlockContent(), 2000);
+      return;
     }
+
+    // Fetch balance and show confirm modal
+    await updateBalance();
     setModalState("confirm");
   };
 
@@ -128,15 +134,7 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
   };
 
   const handleAddFundsSuccess = async () => {
-    // Refresh wallet balance
-    try {
-      const balanceData = await PurchaseService.getWalletBalance();
-      const balanceInDollars = (balanceData.balance_cents / 100).toFixed(2);
-      setUserBalance(balanceInDollars);
-    } catch (error) {
-      // Failed to fetch balance
-    }
-    // Go back to confirm modal
+    await updateBalance();
     setModalState("confirm");
   };
 
@@ -145,27 +143,20 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
       throw new Error("Content ID is required for purchase");
     }
 
-    // Convert price from string to cents
-    const priceCents = Math.round(+config.price);
+    const priceCents = Math.round(parseFloat(config.price || "0") * 100);
 
-    // Call purchase API
-    await PurchaseService.purchaseContent(config.contentId, priceCents);
-
-    // Update balance after successful purchase
     try {
-      const balanceData = await PurchaseService.getWalletBalance();
-      const balanceInDollars = (balanceData.balance_cents / 100).toFixed(2);
-      setUserBalance(balanceInDollars);
-    } catch (error) {
-      // Failed to fetch balance
-    }
-
-    setModalState("unlocked");
-
-    if (onUnlock) {
-      setTimeout(() => {
-        onUnlock();
-      }, 100);
+      await PurchaseService.purchaseContent(config.contentId, priceCents);
+      await updateBalance();
+      unlockContent();
+    } catch (error: any) {
+      // Handle "already purchased" error
+      if (error.message?.toLowerCase().includes("already purchased")) {
+        setModalState("alreadyPurchased");
+        setTimeout(() => unlockContent(), 2000);
+      } else {
+        throw error;
+      }
     }
   };
 
@@ -182,54 +173,53 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">Failed to load configuration</p>
-          <p className="text-gray-600 text-sm">{error}</p>
-        </div>
-      </div>
-    );
-  }
-  if (!googleClientId) return null;
+  // Use googleClientId if available, otherwise use a fallback
+  // Google OAuth will only work if a valid client ID is configured
+  const clientId =
+    googleClientId ||
+    import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+    "placeholder-client-id";
+
+  const appContent = (
+    <div className="ledewire-wrapper font-sans antialiased">
+      {modalState === "overlay" && (
+        <Overlay
+          price={config.price || "0.00"}
+          onPurchase={handlePurchaseClick}
+        />
+      )}
+
+      {modalState === "login" && (
+        <LoginModal
+          onClose={handleCloseModal}
+          onLoginSuccess={handleLoginSuccess}
+        />
+      )}
+
+      {modalState === "confirm" && (
+        <ConfirmModal
+          onClose={handleCloseModal}
+          onConfirm={handleConfirmPurchase}
+          onAddFunds={handleAddFunds}
+          balance={userBalance}
+          price={config.price || "0.00"}
+        />
+      )}
+
+      {modalState === "addFunds" && (
+        <AddFundsModal
+          onClose={() => setModalState("confirm")}
+          onSuccess={handleAddFundsSuccess}
+          requiredAmount={config.price || "0.00"}
+          currentBalance={userBalance}
+        />
+      )}
+
+      {modalState === "alreadyPurchased" && <AlreadyPurchasedModal />}
+    </div>
+  );
 
   return (
-    <GoogleOAuthProvider clientId={googleClientId}>
-      <div className="ledewire-wrapper font-sans antialiased">
-        {modalState === "overlay" && (
-          <Overlay
-            price={config.price || "0.00"}
-            onPurchase={handlePurchaseClick}
-          />
-        )}
-
-        {modalState === "login" && (
-          <LoginModal
-            onClose={handleCloseModal}
-            onLoginSuccess={handleLoginSuccess}
-          />
-        )}
-
-        {modalState === "confirm" && (
-          <ConfirmModal
-            onClose={handleCloseModal}
-            onConfirm={handleConfirmPurchase}
-            onAddFunds={handleAddFunds}
-            balance={userBalance}
-            price={config.price || "0.00"}
-          />
-        )}
-
-        {modalState === "addFunds" && (
-          <AddFundsModal
-            onClose={() => setModalState("confirm")}
-            onSuccess={handleAddFundsSuccess}
-            requiredAmount={config.price || "0.00"}
-            currentBalance={userBalance}
-          />
-        )}
-      </div>
-    </GoogleOAuthProvider>
+    <GoogleOAuthProvider clientId={clientId}>{appContent}</GoogleOAuthProvider>
   );
 };

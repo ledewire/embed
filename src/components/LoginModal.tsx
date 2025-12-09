@@ -13,17 +13,24 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Google login handler (not implemented yet)
   const handleGoogleSuccess = async (credentialResponse: any) => {
-    setError("Google login is not yet implemented");
+    setIsLoading(true);
+    setError(null);
+
     try {
-      const response = await AuthService.loginWithGoogle(
-        credentialResponse.credential
-      );
+      await AuthService.loginWithGoogle(credentialResponse.credential);
+
+      if (onLoginSuccess) {
+        setTimeout(() => onLoginSuccess(), 300);
+      }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Google login failed";
-      console.log(errorMessage);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Google login failed. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -159,11 +166,17 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
         )}
 
         {/* Google Login Button */}
-        <div style={{ marginBottom: "24px" }}>
+        <div
+          style={{
+            marginBottom: "24px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
           <GoogleLogin
             onSuccess={handleGoogleSuccess}
             onError={handleGoogleError}
-            width="100%"
             size="large"
             text="continue_with"
             shape="rectangular"
