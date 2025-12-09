@@ -17,6 +17,12 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Calculate if user has sufficient funds
+  const balanceNum = parseFloat(balance);
+  const priceNum = parseFloat(price);
+  const hasSufficientFunds = balanceNum >= priceNum;
+
   const handlePurchase = async () => {
     if (!onConfirm) return;
 
@@ -124,9 +130,7 @@ export function ConfirmModal({
                 marginBottom: "4px",
               }}
             >
-              {hasSufficientFunds
-                ? "Ready to purchase!"
-                : "Insufficient Funds"}
+              {hasSufficientFunds ? "Ready to purchase!" : "Insufficient Funds"}
             </h3>
             <p
               style={{
@@ -137,7 +141,9 @@ export function ConfirmModal({
             >
               {hasSufficientFunds
                 ? "You have sufficient funds in your wallet to purchase this content."
-                : `You need $${(priceNum - balanceNum).toFixed(2)} more to complete this purchase.`}
+                : `You need $${(priceNum - balanceNum).toFixed(
+                    2
+                  )} more to complete this purchase.`}
             </p>
           </div>
         </div>
