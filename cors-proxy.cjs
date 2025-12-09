@@ -10,7 +10,7 @@ const https = require('https');
 const url = require('url');
 
 const PORT = 8010;
-const TARGET = 'https://api.ledewire.com/v1';
+const TARGET = 'https://api-staging.ledewire.com/v1';
 
 const server = http.createServer((req, res) => {
   // Set CORS headers
