@@ -2,17 +2,19 @@ import { useState } from "preact/hooks";
 import { GoogleLogin } from "@react-oauth/google";
 import { AuthService } from "../services/authService";
 
-interface LoginModalProps {
+interface SignupModalProps {
   onClose?: () => void;
-  onLoginSuccess?: () => void;
-  onSwitchToSignup?: () => void;
+  onSignupSuccess?: () => void;
+  onSwitchToLogin?: () => void;
 }
 
-export function LoginModal({
+export function SignupModal({
   onClose,
-  onLoginSuccess,
-  onSwitchToSignup,
-}: LoginModalProps) {
+  onSignupSuccess,
+  onSwitchToLogin,
+}: SignupModalProps) {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -25,14 +27,14 @@ export function LoginModal({
     try {
       await AuthService.loginWithGoogle(credentialResponse.credential);
 
-      if (onLoginSuccess) {
-        setTimeout(() => onLoginSuccess(), 300);
+      if (onSignupSuccess) {
+        setTimeout(() => onSignupSuccess(), 300);
       }
     } catch (error) {
       setError(
         error instanceof Error
           ? error.message
-          : "Google login failed. Please try again."
+          : "Google signup failed. Please try again."
       );
     } finally {
       setIsLoading(false);
@@ -40,15 +42,15 @@ export function LoginModal({
   };
 
   const handleGoogleError = () => {
-    setError("Google login failed. Please try again.");
+    setError("Google signup failed. Please try again.");
   };
 
-  // Email/Password login
-  const handleEmailLogin = async (e: Event) => {
+  // Email/Password signup
+  const handleEmailSignup = async (e: Event) => {
     e.preventDefault();
 
-    if (!email || !password) {
-      setError("Please enter both email and password");
+    if (!firstName || !lastName || !email || !password) {
+      setError("Please fill in all fields");
       return;
     }
 
@@ -56,14 +58,13 @@ export function LoginModal({
     setError(null);
 
     try {
-      await AuthService.loginWithEmail(email, password);
+      await AuthService.signup(email, password, firstName, lastName);
 
-      if (onLoginSuccess) {
-        setTimeout(() => onLoginSuccess(), 300);
+      if (onSignupSuccess) {
+        setTimeout(() => onSignupSuccess(), 300);
       }
     } catch (err: any) {
-      setError(err.message || "Invalid email or password");
-    } finally {
+      setError(err.message || "Failed to create account. Please try again.");
       setIsLoading(false);
     }
   };
@@ -138,7 +139,7 @@ export function LoginModal({
             marginTop: 0,
           }}
         >
-          Welcome back!
+          Create your account
         </h2>
         <p
           style={{
@@ -149,7 +150,7 @@ export function LoginModal({
             textAlign: "left",
           }}
         >
-          Sign in to access your wallet and purchase this premium content.
+          Sign up to get started with LedeWire and access premium content.
         </p>
 
         {/* Error Message */}
@@ -170,7 +171,7 @@ export function LoginModal({
           </div>
         )}
 
-        {/* Google Login Button */}
+        {/* Google Signup Button */}
         <div
           style={{
             marginBottom: "24px",
@@ -225,13 +226,97 @@ export function LoginModal({
                 letterSpacing: "0.5px",
               }}
             >
-              OR CONTINUE WITH EMAIL
+              Or continue with email
             </span>
           </div>
         </div>
 
-        {/* Email/Password Form */}
-        <form onSubmit={handleEmailLogin}>
+        {/* Signup Form */}
+        <form onSubmit={handleEmailSignup}>
+          {/* First Name and Last Name Row */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px",
+              marginBottom: "16px",
+            }}
+          >
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  color: "#374151",
+                  marginBottom: "6px",
+                  textAlign: "left",
+                }}
+              >
+                FIRST NAME *
+              </label>
+              <input
+                type="text"
+                value={firstName}
+                onInput={(e) =>
+                  setFirstName((e.target as HTMLInputElement).value)
+                }
+                disabled={isLoading}
+                required
+                style={{
+                  width: "100%",
+                  padding: "10px 14px",
+                  fontSize: "15px",
+                  border: "1px solid #D1D5DB",
+                  borderRadius: "6px",
+                  outline: "none",
+                  transition: "border-color 0.2s",
+                  boxSizing: "border-box",
+                  opacity: isLoading ? 0.6 : 1,
+                }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "#4A7C9C")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "#D1D5DB")}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  color: "#374151",
+                  marginBottom: "6px",
+                  textAlign: "left",
+                }}
+              >
+                LAST NAME *
+              </label>
+              <input
+                type="text"
+                value={lastName}
+                onInput={(e) =>
+                  setLastName((e.target as HTMLInputElement).value)
+                }
+                disabled={isLoading}
+                required
+                style={{
+                  width: "100%",
+                  padding: "10px 14px",
+                  fontSize: "15px",
+                  border: "1px solid #D1D5DB",
+                  borderRadius: "6px",
+                  outline: "none",
+                  transition: "border-color 0.2s",
+                  boxSizing: "border-box",
+                  opacity: isLoading ? 0.6 : 1,
+                }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "#4A7C9C")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "#D1D5DB")}
+              />
+            </div>
+          </div>
+
           <div style={{ marginBottom: "16px" }}>
             <label
               style={{
@@ -311,7 +396,7 @@ export function LoginModal({
               padding: "12px",
               borderRadius: "6px",
               border: "none",
-              background: isLoading ? "#9CA3AF" : "#4A7C9C",
+              background: isLoading ? "#9CA3AF" : "#2563EB",
               color: "white",
               fontSize: "15px",
               fontWeight: "600",
@@ -321,39 +406,19 @@ export function LoginModal({
               opacity: isLoading ? 0.6 : 1,
             }}
             onMouseOver={(e) => {
-              if (!isLoading) e.currentTarget.style.background = "#3D6883";
+              if (!isLoading) e.currentTarget.style.background = "#1D4ED8";
             }}
             onMouseOut={(e) => {
-              if (!isLoading) e.currentTarget.style.background = "#4A7C9C";
+              if (!isLoading) e.currentTarget.style.background = "#2563EB";
             }}
           >
-            {isLoading ? "Logging in..." : "Log In"}
+            {isLoading ? "Creating account..." : "Sign Up"}
           </button>
-
-          <div style={{ textAlign: "center", marginBottom: "16px" }}>
-            <a
-              href="#"
-              style={{
-                fontSize: "14px",
-                color: "#4A7C9C",
-                textDecoration: "none",
-              }}
-              onClick={(e) => e.preventDefault()}
-              onMouseOver={(e) =>
-                (e.currentTarget.style.textDecoration = "underline")
-              }
-              onMouseOut={(e) =>
-                (e.currentTarget.style.textDecoration = "none")
-              }
-            >
-              Forgot Password?
-            </a>
-          </div>
 
           <div
             style={{ textAlign: "center", fontSize: "14px", color: "#6B7280" }}
           >
-            Need an account?{" "}
+            Already have an account?{" "}
             <a
               href="#"
               style={{
@@ -363,7 +428,7 @@ export function LoginModal({
               }}
               onClick={(e) => {
                 e.preventDefault();
-                if (onSwitchToSignup) onSwitchToSignup();
+                if (onSwitchToLogin) onSwitchToLogin();
               }}
               onMouseOver={(e) =>
                 (e.currentTarget.style.textDecoration = "underline")
@@ -372,7 +437,7 @@ export function LoginModal({
                 (e.currentTarget.style.textDecoration = "none")
               }
             >
-              Sign up
+              Log in
             </a>
           </div>
         </form>
