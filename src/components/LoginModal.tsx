@@ -6,12 +6,14 @@ interface LoginModalProps {
   onClose?: () => void;
   onLoginSuccess?: () => void;
   onSwitchToSignup?: () => void;
+  onResetClick?: () => void;
 }
 
 export function LoginModal({
   onClose,
   onLoginSuccess,
   onSwitchToSignup,
+  onResetClick,
 }: LoginModalProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -338,7 +340,10 @@ export function LoginModal({
                 color: "#4A7C9C",
                 textDecoration: "none",
               }}
-              onClick={(e) => e.preventDefault()}
+              onClick={(e) => {
+                if (!onResetClick) return;
+                onResetClick();
+              }}
               onMouseOver={(e) =>
                 (e.currentTarget.style.textDecoration = "underline")
               }

@@ -10,6 +10,7 @@ import { AuthService } from "./services/authService";
 import { PurchaseService } from "./services/purchaseService";
 import { ConfigProvider, useConfig } from "./contexts/ConfigContext";
 import "./style.css";
+import ResetPassword from "./components/ResetPassword";
 
 interface AppProps {
   config: {
@@ -29,7 +30,8 @@ type ModalState =
   | "confirm"
   | "addFunds"
   | "alreadyPurchased"
-  | "unlocked";
+  | "unlocked"
+  | "resetPassword";
 
 export function App({ config, onUnlock }: AppProps) {
   return (
@@ -124,14 +126,12 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
   };
 
   const handleLoginSuccess = async () => {
-    // Check if already purchased
     if (await checkAlreadyPurchased()) {
       setModalState("alreadyPurchased");
       setTimeout(() => unlockContent(), 2000);
       return;
     }
 
-    // Fetch balance and show confirm modal
     await updateBalance();
     setModalState("confirm");
   };
@@ -191,6 +191,14 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
     }
   };
 
+  const handleResetClick = () => {
+    setModalState("resetPassword");
+  };
+
+  const backToLogin = () => {
+    setModalState("login");
+  };
+
   if (modalState === "unlocked") return null;
 
   if (isLoading) {
@@ -223,6 +231,7 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
       {modalState === "login" && (
         <LoginModal
           onClose={handleCloseModal}
+          onResetClick={handleResetClick}
           onLoginSuccess={handleLoginSuccess}
           onSwitchToSignup={() => setModalState("signup")}
         />
@@ -253,6 +262,12 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
           requiredAmount={contentPrice.toString() || "0.00"}
           currentBalance={userBalance}
         />
+      )}
+
+      {modalState === "resetPassword" && (
+        <>
+          <ResetPassword backToLogin={backToLogin} />
+        </>
       )}
 
       {modalState === "alreadyPurchased" && <AlreadyPurchasedModal />}
