@@ -113,8 +113,10 @@ export class AuthService {
 
   static async getConfig(apiKey: string): Promise<IConfigResponse> {
     try {
-      const sellerAccessToken = await this.authenticateSeller(apiKey);
-
+      let sellerAccessToken = TokenManager.getSellerToken();
+      if (!sellerAccessToken) {
+        sellerAccessToken = await this.authenticateSeller(apiKey);
+      }
       const configResponse = await axios.get(`${API_BASE_URL}/seller/config`, {
         headers: {
           Authorization: `Bearer ${sellerAccessToken}`,
@@ -126,7 +128,7 @@ export class AuthService {
       if (configResponse.status !== 200) {
         throw new Error(
           `Failed to load seller config (status ${configResponse.status}): ` +
-            JSON.stringify(configResponse.data)
+          JSON.stringify(configResponse.data)
         );
       }
 

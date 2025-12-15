@@ -34,6 +34,19 @@ type ModalState =
   | "resetPassword";
 
 export function App({ config, onUnlock }: AppProps) {
+  const [isReady, setReady] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!config.apiKey) return;
+    const authenticate = async () => {
+      await AuthService.authenticateSeller(config.apiKey as string);
+      setReady(true);
+    };
+    authenticate();
+  }, [config.apiKey]);
+
+  if (!isReady) return null;
+
   return (
     <ConfigProvider apiKey={config.apiKey || ""}>
       <AppContent config={config} onUnlock={onUnlock} />
@@ -101,9 +114,10 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
 
     const getPrice = async () => {
       const price = await AuthService.getDynamicPricing(config.contentId || "");
-
       //conversion to dollar as we are getting price in cents
-      setContentPrice(price.price_cents);
+      if (price.price_cents) {
+        setContentPrice(price.price_cents / 100);
+      }
     };
     getPrice();
     checkAuth();
