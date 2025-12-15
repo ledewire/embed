@@ -18,7 +18,8 @@ export interface GoogleLoginRequest {
 export interface SignupRequest {
   email: string;
   password: string;
-  name: string;
+  first_name: string;
+  last_name: string;
 }
 
 interface IConfigResponse {
@@ -160,12 +161,14 @@ export class AuthService {
   static async signup(
     email: string,
     password: string,
-    name: string
+    first_name: string,
+    last_name: string
   ): Promise<AuthTokens> {
     const response = await ApiClient.post<AuthTokens>("/auth/signup", {
       email,
       password,
-      name,
+      first_name,
+      last_name,
     });
 
     TokenManager.setTokens(response);

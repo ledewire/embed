@@ -2,6 +2,7 @@ import { useState, useEffect } from "preact/hooks";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { Overlay } from "./components/Overlay";
 import { LoginModal } from "./components/LoginModal";
+import { SignupModal } from "./components/SignupModal";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { AddFundsModal } from "./components/AddFundsModal";
 import { AlreadyPurchasedModal } from "./components/AlreadyPurchasedModal";
@@ -24,6 +25,7 @@ interface AppProps {
 type ModalState =
   | "overlay"
   | "login"
+  | "signup"
   | "confirm"
   | "addFunds"
   | "alreadyPurchased"
@@ -134,6 +136,26 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
     setModalState("confirm");
   };
 
+  const handleSignupSuccess = async () => {
+    try {
+      // Check if already purchased
+      const alreadyPurchased = await checkAlreadyPurchased();
+
+      if (alreadyPurchased) {
+        setModalState("alreadyPurchased");
+        setTimeout(() => unlockContent(), 2000);
+        return;
+      }
+
+      // Fetch balance and show confirm modal
+      await updateBalance();
+      setModalState("confirm");
+    } catch (error) {
+      // Fallback to confirm modal even if there's an error
+      setModalState("confirm");
+    }
+  };
+
   const handleCloseModal = () => {
     setModalState("overlay");
   };
@@ -202,6 +224,15 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
         <LoginModal
           onClose={handleCloseModal}
           onLoginSuccess={handleLoginSuccess}
+          onSwitchToSignup={() => setModalState("signup")}
+        />
+      )}
+
+      {modalState === "signup" && (
+        <SignupModal
+          onClose={handleCloseModal}
+          onSignupSuccess={handleSignupSuccess}
+          onSwitchToLogin={() => setModalState("login")}
         />
       )}
 
