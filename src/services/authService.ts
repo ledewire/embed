@@ -155,6 +155,34 @@ export class AuthService {
     return response.data;
   }
 
+  static async getResetCode(email: string): Promise<{ message: string }> {
+    const response: AxiosResponse<{ message: string }> = await axios.post<{
+      message: string;
+    }>(`${API_BASE_URL}/auth/password/reset-request`, { email });
+
+    return response.data;
+  }
+
+  static async setNewPassword({
+    email,
+    newPassword,
+    otp,
+  }: {
+    email: string;
+    newPassword: string;
+    otp: string;
+  }): Promise<{ message: string }> {
+    const response: AxiosResponse<{ message: string }> = await axios.post<{
+      message: string;
+    }>(`${API_BASE_URL}/auth/password/reset`, {
+      email: email,
+      password: newPassword,
+      reset_code: otp,
+    });
+
+    return response.data;
+  }
+
   /**
    * Sign up with email and password
    */
