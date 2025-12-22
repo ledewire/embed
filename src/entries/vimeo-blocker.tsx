@@ -1,6 +1,6 @@
 import { render } from "preact";
-import { App } from "./App";
-import style from "./style.css?inline"; // Import CSS as inline string
+import { App } from "../App";
+import style from "../style.css?inline"; // Import CSS as inline string
 
 (function () {
   function getVimeoVideoId() {
