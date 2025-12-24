@@ -26,6 +26,22 @@ interface IConfigResponse {
   google_client_id: string;
 }
 
+export interface IContentMetadata {
+  id: string;
+  content_type: string;
+  title: string;
+  price_cents: number;
+  content_body: string;
+  teaser: string;
+  visibility: string;
+  metadata: {
+    author: string;
+    publish_date: string;
+    read_time: string;
+  };
+  access_info: any
+};
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "https://api.ledewire.com/v1";
 
@@ -140,11 +156,10 @@ export class AuthService {
 
   static async getContentMetadata(
     contentId: string
-  ): Promise<{ price_cents: number }> {
+  ): Promise<IContentMetadata> {
     const seller_token = TokenManager.getSellerToken();
-    const response: AxiosResponse<{ price_cents: number }> = await axios.get<{
-      price_cents: number;
-    }>(`${API_BASE_URL}/content/${contentId}/with-access`, {
+    const response: AxiosResponse<IContentMetadata> = await axios.get<IContentMetadata>(
+      `${API_BASE_URL}/content/${contentId}/with-access`, {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${seller_token}`,

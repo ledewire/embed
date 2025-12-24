@@ -27,10 +27,10 @@ import style from "../style.css?inline"; // Import CSS as inline string
     }
 
     const detectedVideoId = getVimeoVideoId();
+    // const detectedVideoId = "972e539f-effd-4bd3-b550-0b94b421118f"; // FOR TESTING PURPOSE ONLY
     return {
       apiKey: script.dataset.apiKey,
-      contentId: "972e539f-effd-4bd3-b550-0b94b421118f", // FOR TESTING PURPOSE ONLY
-      // contentId: detectedVideoId,
+      contentId: detectedVideoId,
       creatorId: script.dataset.creatorId,
       playerType: script.dataset.player,
       autoplay: script.dataset.autoplay === "true",
