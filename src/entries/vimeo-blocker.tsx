@@ -1,8 +1,9 @@
 import { render } from "preact";
 import { App } from "../App";
+import { AuthService } from "../services/authService";
 import style from "../style.css?inline"; // Import CSS as inline string
 
-(function () {
+(async function () {
   function getVimeoVideoId() {
     const iframe = document.querySelector(
       "iframe[src*='player.vimeo.com/video']"
@@ -28,7 +29,8 @@ import style from "../style.css?inline"; // Import CSS as inline string
     const detectedVideoId = getVimeoVideoId();
     return {
       apiKey: script.dataset.apiKey,
-      contentId: "972e539f-effd-4bd3-b550-0b94b421118f" || detectedVideoId,
+      contentId: "972e539f-effd-4bd3-b550-0b94b421118f", // FOR TESTING PURPOSE ONLY
+      // contentId: detectedVideoId,
       creatorId: script.dataset.creatorId,
       playerType: script.dataset.player,
       autoplay: script.dataset.autoplay === "true",
@@ -130,18 +132,50 @@ import style from "../style.css?inline"; // Import CSS as inline string
   appRoot.style.height = "100%";
   shadow.appendChild(appRoot);
 
-  // Render Preact app with playVideo callback
-  render(
-    <App
-      config={config as any}
-      onUnlock={() => {
-        playVideo(videoEl);
-        // Remove overlay container to allow video interaction
-        setTimeout(() => {
-          container.remove();
-        }, 300);
-      }}
-    />,
-    appRoot
-  );
+  try {
+    // 1. Authenticate Seller
+    if (config.apiKey) {
+      await AuthService.authenticateSeller(config.apiKey);
+    }
+
+    // 2. Get Seller Config
+    let sellerConfig = null;
+    if (config.apiKey) {
+      try {
+        sellerConfig = await AuthService.getConfig(config.apiKey);
+      } catch (e) {
+        console.error("Failed to get seller config:", e);
+      }
+    }
+
+    // 3. Get Content Metadata
+    let contentMetadata = undefined;
+    if (config.contentId) {
+      try {
+        contentMetadata = await AuthService.getContentMetadata(config.contentId);
+      } catch (e) {
+        console.error("Failed to get content metadata:", e);
+      }
+    }
+
+    // Render Preact app with playVideo callback
+    render(
+      <App
+        config={config as any}
+        sellerConfig={sellerConfig}
+        contentMetadata={contentMetadata}
+        onUnlock={() => {
+          playVideo(videoEl!);
+          // Remove overlay container to allow video interaction
+          setTimeout(() => {
+            container.remove();
+          }, 300);
+        }}
+      />,
+      appRoot
+    );
+  } catch (error) {
+    console.error("Initialization failed:", error);
+  }
+
 })();

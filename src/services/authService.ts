@@ -138,7 +138,7 @@ export class AuthService {
     }
   }
 
-  static async getDynamicPricing(
+  static async getContentMetadata(
     contentId: string
   ): Promise<{ price_cents: number }> {
     const seller_token = TokenManager.getSellerToken();

@@ -1,5 +1,6 @@
 import { render } from "preact";
 import { App } from "../App";
+import { AuthService } from "../services/authService";
 import style from "../style.css?inline";
 
 (function () {
@@ -20,7 +21,7 @@ import style from "../style.css?inline";
     }
 
     // Wait for body to be available
-    function init() {
+    async function init() {
         if (!document.body) {
             window.addEventListener("DOMContentLoaded", init);
             return;
@@ -29,8 +30,6 @@ import style from "../style.css?inline";
         const config = getScriptConfig();
 
         // Check URL match
-        // If specific pattern provided, check it. Otherwise assume block if this script is present.
-        // User requirement: "detects the URL of the page and blocks the entire page"
         if (config.matchPattern) {
             try {
                 const regex = new RegExp(config.matchPattern);
@@ -42,46 +41,77 @@ import style from "../style.css?inline";
             }
         }
 
-        // Create full page overlay
+        // Create container (same as before)
         const container = document.createElement("div");
         container.style.position = "fixed";
         container.style.top = "0";
         container.style.left = "0";
         container.style.width = "100vw";
         container.style.height = "100vh";
-        container.style.zIndex = "2147483647"; // Max safe z-index
-        container.style.backgroundColor = "rgba(255, 255, 255, 0.3)"; // Semi-transparent for blur effect
+        container.style.zIndex = "2147483647";
+        container.style.backgroundColor = "rgba(255, 255, 255, 0.3)";
         container.style.backdropFilter = "blur(10px)";
-        (container.style as any).webkitBackdropFilter = "blur(10px)"; // Safari support
+        (container.style as any).webkitBackdropFilter = "blur(10px)";
 
         document.body.appendChild(container);
-        document.body.style.overflow = "hidden"; // Prevent scrolling while blocked
+        document.body.style.overflow = "hidden";
 
-        // Attach Shadow DOM or just render directly? Shadow DOM is safer for style isolation.
         const shadow = container.attachShadow({ mode: "open" });
 
-        // Inject styles
         const styleTag = document.createElement("style");
         styleTag.textContent = style;
         shadow.appendChild(styleTag);
 
-        // Create app root
         const appRoot = document.createElement("div");
         appRoot.style.width = "100%";
         appRoot.style.height = "100%";
         shadow.appendChild(appRoot);
 
-        render(
-            <App
-                config={config as any}
-                onUnlock={() => {
-                    // Remove the overlay to unblock the page
-                    container.remove();
-                    document.body.style.overflow = ""; // Restore scrolling
-                }}
-            />,
-            appRoot
-        );
+        try {
+            // 1. Authenticate Seller
+            if (config.apiKey) {
+                await AuthService.authenticateSeller(config.apiKey);
+            }
+
+            // 2. Get Seller Config
+            let sellerConfig = null;
+            if (config.apiKey) {
+                try {
+                    sellerConfig = await AuthService.getConfig(config.apiKey);
+                } catch (e) {
+                    console.error("Failed to get seller config:", e);
+                }
+            }
+
+            // 3. Get Content Metadata
+            let contentMetadata = undefined;
+            if (config.contentId) {
+                try {
+                    contentMetadata = await AuthService.getContentMetadata(config.contentId);
+                } catch (e) {
+                    console.error("Failed to get content metadata:", e);
+                }
+            }
+
+            render(
+                <App
+                    config={config as any}
+                    sellerConfig={sellerConfig}
+                    contentMetadata={contentMetadata || undefined}
+                    onUnlock={() => {
+                        container.remove();
+                        document.body.style.overflow = "";
+                    }}
+                />,
+                appRoot
+            );
+
+        } catch (error) {
+            console.error("Initialization failed:", error);
+            // Optionally remove the blocker if auth fails completely?
+            // container.remove();
+            // document.body.style.overflow = "";
+        }
     }
 
     init();
