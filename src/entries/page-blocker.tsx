@@ -4,30 +4,54 @@ import { AuthService } from "../services/authService";
 import style from "../style.css?inline";
 
 (function () {
-    function getScriptConfig() {
-        const script =
-            document.currentScript || document.querySelector("script[data-api-key]");
+  async function hashUrlWithApiKey(
+    url: string,
+    apiKey: string
+  ): Promise<string> {
+    const combined = `${url}:${apiKey}`;
+    const encoder = new TextEncoder();
+    const data = encoder.encode(combined);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
 
-        if (!script || !(script instanceof HTMLScriptElement)) {
-            return {};
-        }
+  async function getScriptConfig() {
+    const script =
+      document.currentScript || document.querySelector("script[data-api-key]");
 
-        return {
-            apiKey: script.dataset.apiKey,
-            contentId: script.dataset.contentId,
-            creatorId: script.dataset.creatorId,
-            matchPattern: script.dataset.matchPattern || ".*", // Default to match everything if not specified
-        };
+    if (!script || !(script instanceof HTMLScriptElement)) {
+      return {};
     }
 
-    // Wait for body to be available
-    async function init() {
-        if (!document.body) {
-            window.addEventListener("DOMContentLoaded", init);
-            return;
-        }
+    const apiKey = script.dataset.apiKey;
+    let contentId: string | undefined = undefined;
 
-        const config = getScriptConfig();
+    // Calculate contentId by hashing URL with apiKey
+    if (apiKey) {
+      try {
+        contentId = await hashUrlWithApiKey(window.location.href, apiKey);
+      } catch (e) {
+        console.error("Failed to hash URL with apiKey:", e);
+      }
+    }
+
+    return {
+      apiKey,
+      contentId,
+      creatorId: script.dataset.creatorId,
+      matchPattern: script.dataset.matchPattern || ".*", // Default to match everything if not specified
+    };
+  }
+
+  // Wait for body to be available
+  async function init() {
+    if (!document.body) {
+      window.addEventListener("DOMContentLoaded", init);
+      return;
+    }
+
+    const config = await getScriptConfig();
 
         // Check URL match
         if (config.matchPattern) {
