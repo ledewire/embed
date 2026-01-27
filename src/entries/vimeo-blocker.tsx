@@ -148,11 +148,17 @@ import style from "../style.css?inline"; // Import CSS as inline string
       }
     }
 
-    // 3. Get Content Metadata
+    // 3. Get Content Metadata by searching with vimeo_id
     let contentMetadata = undefined;
     if (config.contentId) {
       try {
-        contentMetadata = await AuthService.getContentMetadata(config.contentId);
+        contentMetadata = await AuthService.searchContentByMetadata({
+          vimeo_id: config.contentId,
+        });
+        // Extract the actual content ID from metadata for purchase operations
+        if (contentMetadata) {
+          config.contentId = contentMetadata.id;
+        }
       } catch (e) {
         console.error("Failed to get content metadata:", e);
       }
@@ -177,5 +183,4 @@ import style from "../style.css?inline"; // Import CSS as inline string
   } catch (error) {
     console.error("Initialization failed:", error);
   }
-
 })();

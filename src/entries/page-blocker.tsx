@@ -4,18 +4,6 @@ import { AuthService } from "../services/authService";
 import style from "../style.css?inline";
 
 (function () {
-  async function hashUrlWithApiKey(
-    url: string,
-    apiKey: string
-  ): Promise<string> {
-    const combined = `${url}:${apiKey}`;
-    const encoder = new TextEncoder();
-    const data = encoder.encode(combined);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-  }
-
   function getPageScript() {
     const script =
       document.currentScript || document.querySelector("script[data-api-key]");
@@ -27,7 +15,7 @@ import style from "../style.css?inline";
     return script;
   }
 
-  async function getScriptConfig() {
+  function getScriptConfig() {
     const script = getPageScript();
 
     if (!script) {
@@ -35,22 +23,13 @@ import style from "../style.css?inline";
     }
 
     const apiKey = script.dataset.apiKey;
-    let contentId: string | undefined = undefined;
-
-    // Calculate contentId by hashing URL with apiKey
-    if (apiKey) {
-      try {
-        contentId = await hashUrlWithApiKey(window.location.href, apiKey);
-      } catch (e) {
-        console.error("Failed to hash URL with apiKey:", e);
-      }
-    }
 
     return {
       apiKey,
-      contentId,
+      externalUrl: window.location.href,
       creatorId: script.dataset.creatorId,
       matchPattern: script.dataset.matchPattern || ".*", // Default to match everything if not specified
+      contentId: undefined as string | undefined,
     };
   }
 
@@ -112,13 +91,17 @@ import style from "../style.css?inline";
         }
       }
 
-      // 3. Get Content Metadata
+      // 3. Get Content Metadata by searching with external_url
       let contentMetadata = undefined;
-      if (config.contentId) {
+      if (config.externalUrl) {
         try {
-          contentMetadata = await AuthService.getContentMetadata(
-            config.contentId
-          );
+          contentMetadata = await AuthService.searchContentByMetadata({
+            external_url: config.externalUrl,
+          });
+          // Extract the actual content ID from metadata for purchase operations
+          if (contentMetadata) {
+            config.contentId = contentMetadata.id;
+          }
         } catch (e) {
           console.error("Failed to get content metadata:", e);
         }

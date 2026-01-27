@@ -39,8 +39,8 @@ export interface IContentMetadata {
     publish_date: string;
     read_time: string;
   };
-  access_info: any
-};
+  access_info: any;
+}
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "https://api.ledewire.com/v1";
@@ -144,7 +144,7 @@ export class AuthService {
       if (configResponse.status !== 200) {
         throw new Error(
           `Failed to load seller config (status ${configResponse.status}): ` +
-          JSON.stringify(configResponse.data)
+            JSON.stringify(configResponse.data)
         );
       }
 
@@ -158,18 +158,57 @@ export class AuthService {
     contentId: string
   ): Promise<IContentMetadata> {
     const seller_token = TokenManager.getSellerToken();
-    const response: AxiosResponse<IContentMetadata> = await axios.get<IContentMetadata>(
-      `${API_BASE_URL}/content/${contentId}/with-access`, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${seller_token}`,
-      },
-      // We'll handle non-2xx statuses manually below
-      validateStatus: () => true,
-      timeout: 10_000,
-    });
+    const response: AxiosResponse<IContentMetadata> =
+      await axios.get<IContentMetadata>(
+        `${API_BASE_URL}/content/${contentId}/with-access`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${seller_token}`,
+          },
+          // We'll handle non-2xx statuses manually below
+          validateStatus: () => true,
+          timeout: 10_000,
+        }
+      );
 
     return response.data;
+  }
+
+  /**
+   * Search content by metadata (vimeo_id or external_url)
+   * Returns the first matching content or undefined if none found
+   */
+  static async searchContentByMetadata(metadata: {
+    vimeo_id?: string;
+    external_url?: string;
+  }): Promise<IContentMetadata | undefined> {
+    const seller_token = TokenManager.getSellerToken();
+    const response: AxiosResponse<IContentMetadata[]> = await axios.post<
+      IContentMetadata[]
+    >(
+      `${API_BASE_URL}/seller/content/search`,
+      { metadata },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${seller_token}`,
+        },
+        validateStatus: () => true,
+        timeout: 10_000,
+      }
+    );
+
+    if (
+      response.status !== 200 ||
+      !Array.isArray(response.data) ||
+      response.data.length === 0
+    ) {
+      return undefined;
+    }
+
+    // Return the first matching content
+    return response.data[0];
   }
 
   static async getResetCode(email: string): Promise<{ message: string }> {
