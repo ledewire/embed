@@ -24,9 +24,13 @@ import style from "../style.css?inline";
 
     const apiKey = script.dataset.apiKey;
 
+    // Optional data-external-url override: for testing when dev port differs from backend (e.g. 5174 vs 5173).
+    const externalUrl =
+      script.dataset.externalUrl ?? window.location.href;
+
     return {
       apiKey,
-      externalUrl: window.location.href,
+      externalUrl,
       creatorId: script.dataset.creatorId,
       matchPattern: script.dataset.matchPattern || ".*", // Default to match everything if not specified
       contentId: undefined as string | undefined,
