@@ -48,7 +48,7 @@ export class PurchaseService {
       "/purchases",
       {
         content_id: contentId,
-        price_cents: priceCents,
+        price_cents: priceCents*100,
       },
       true
     );

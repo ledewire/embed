@@ -1,8 +1,9 @@
 import { render } from "preact";
-import { App } from "./App";
-import style from "./style.css?inline"; // Import CSS as inline string
+import { App } from "../App";
+import { AuthService } from "../services/authService";
+import style from "../style.css?inline"; // Import CSS as inline string
 
-(function () {
+(async function () {
   function getVimeoVideoId() {
     const iframe = document.querySelector(
       "iframe[src*='player.vimeo.com/video']"
@@ -26,9 +27,10 @@ import style from "./style.css?inline"; // Import CSS as inline string
     }
 
     const detectedVideoId = getVimeoVideoId();
+    // const detectedVideoId = "972e539f-effd-4bd3-b550-0b94b421118f"; // FOR TESTING PURPOSE ONLY
     return {
       apiKey: script.dataset.apiKey,
-      contentId: "972e539f-effd-4bd3-b550-0b94b421118f" || detectedVideoId,
+      contentId: detectedVideoId,
       creatorId: script.dataset.creatorId,
       playerType: script.dataset.player,
       autoplay: script.dataset.autoplay === "true",
@@ -130,18 +132,55 @@ import style from "./style.css?inline"; // Import CSS as inline string
   appRoot.style.height = "100%";
   shadow.appendChild(appRoot);
 
-  // Render Preact app with playVideo callback
-  render(
-    <App
-      config={config as any}
-      onUnlock={() => {
-        playVideo(videoEl);
-        // Remove overlay container to allow video interaction
-        setTimeout(() => {
-          container.remove();
-        }, 300);
-      }}
-    />,
-    appRoot
-  );
+  try {
+    // 1. Authenticate Seller
+    if (config.apiKey) {
+      await AuthService.authenticateSeller(config.apiKey);
+    }
+
+    // 2. Get Seller Config
+    let sellerConfig = null;
+    if (config.apiKey) {
+      try {
+        sellerConfig = await AuthService.getConfig(config.apiKey);
+      } catch (e) {
+        console.error("Failed to get seller config:", e);
+      }
+    }
+
+    // 3. Get Content Metadata by searching with vimeo_id
+    let contentMetadata = undefined;
+    if (config.contentId) {
+      try {
+        contentMetadata = await AuthService.searchContentByMetadata({
+          vimeo_id: config.contentId,
+        });
+        // Extract the actual content ID from metadata for purchase operations
+        if (contentMetadata) {
+          config.contentId = contentMetadata.id;
+        }
+      } catch (e) {
+        console.error("Failed to get content metadata:", e);
+      }
+    }
+
+    // Render Preact app with playVideo callback
+    render(
+      <App
+        config={config as any}
+        sellerConfig={sellerConfig}
+        contentMetadata={contentMetadata}
+        onUnlock={() => {
+          playVideo(videoEl!);
+          // Remove overlay container to allow video interaction
+          setTimeout(() => {
+            container.remove();
+          }, 300);
+        }}
+      />,
+      appRoot
+    );
+  } catch (error) {
+    console.error("Initialization failed:", error);
+  }
 })();

@@ -8,7 +8,6 @@ import { AddFundsModal } from "./components/AddFundsModal";
 import { AlreadyPurchasedModal } from "./components/AlreadyPurchasedModal";
 import { AuthService } from "./services/authService";
 import { PurchaseService } from "./services/purchaseService";
-import { ConfigProvider, useConfig } from "./contexts/ConfigContext";
 import "./style.css";
 import ResetPassword from "./components/ResetPassword";
 
@@ -19,6 +18,22 @@ interface AppProps {
     creatorId?: string;
     playerType?: string;
     autoplay?: boolean;
+  };
+  sellerConfig?: any;
+  contentMetadata?: {
+    id: string,
+    content_type: string,
+    title: string,
+    price_cents: number,
+    content_body: string,
+    teaser: string,
+    visibility: string,
+    metadata: {
+      author: string,
+      publish_date: string,
+      read_time: string,
+    },
+    access_info: any
   };
   onUnlock?: () => void;
 }
@@ -33,32 +48,11 @@ type ModalState =
   | "unlocked"
   | "resetPassword";
 
-export function App({ config, onUnlock }: AppProps) {
-  const [isReady, setReady] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (!config.apiKey) return;
-    const authenticate = async () => {
-      await AuthService.authenticateSeller(config.apiKey as string);
-      setReady(true);
-    };
-    authenticate();
-  }, [config.apiKey]);
-
-  if (!isReady) return null;
-
-  return (
-    <ConfigProvider apiKey={config.apiKey || ""}>
-      <AppContent config={config} onUnlock={onUnlock} />
-    </ConfigProvider>
-  );
-}
-
-const AppContent = ({ config, onUnlock }: AppProps) => {
-  const { googleClientId, isLoading } = useConfig();
+export function App({ config, sellerConfig, contentMetadata, onUnlock }: AppProps) {
   const [modalState, setModalState] = useState<ModalState>("overlay");
   const [userBalance, setUserBalance] = useState("0.00");
-  const [contentPrice, setContentPrice] = useState(0);
+  const contentPrice = contentMetadata?.price_cents ? contentMetadata?.price_cents / 100 : 1;
+  const googleClientId = sellerConfig.google_client_id;
 
   // Helper to unlock content
   const unlockContent = (delay = 100) => {
@@ -112,14 +106,6 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
       }
     };
 
-    const getPrice = async () => {
-      const price = await AuthService.getDynamicPricing(config.contentId || "");
-      //conversion to dollar as we are getting price in cents
-      if (price.price_cents) {
-        setContentPrice(price.price_cents / 100);
-      }
-    };
-    getPrice();
     checkAuth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -188,7 +174,7 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
       throw new Error("Content ID is required for purchase");
     }
 
-    const priceCents = Math.round(+contentPrice);
+    const priceCents = +contentPrice;
 
     try {
       await PurchaseService.purchaseContent(config.contentId, priceCents);
@@ -214,25 +200,6 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
   };
 
   if (modalState === "unlocked") return null;
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading configuration...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Use googleClientId if available, otherwise use a fallback
-  // Google OAuth will only work if a valid client ID is configured
-  const clientId =
-    googleClientId ||
-    import.meta.env.VITE_GOOGLE_CLIENT_ID ||
-    "placeholder-client-id";
-
   const appContent = (
     <div className="ledewire-wrapper font-sans antialiased">
       {modalState === "overlay" && (
@@ -289,6 +256,6 @@ const AppContent = ({ config, onUnlock }: AppProps) => {
   );
 
   return (
-    <GoogleOAuthProvider clientId={clientId}>{appContent}</GoogleOAuthProvider>
+    <GoogleOAuthProvider clientId={googleClientId}>{appContent}</GoogleOAuthProvider>
   );
 };
