@@ -51,7 +51,7 @@ export class AuthService {
    */
   static async loginWithEmail(
     email: string,
-    password: string
+    password: string,
   ): Promise<AuthTokens> {
     const response = await ApiClient.post<AuthTokens>("/auth/login/email", {
       email,
@@ -82,9 +82,7 @@ export class AuthService {
       validateStatus: () => true,
     };
 
-    const response = await axios(config);
-
-    console.log(response);
+    await axios(config);
   }
 
   static async authenticateSeller(apiKey: string) {
@@ -115,7 +113,7 @@ export class AuthService {
         ? JSON.stringify(response.data)
         : "no body";
       throw new Error(
-        `Auth request failed (status ${response.status}): ${bodyPreview}`
+        `Auth request failed (status ${response.status}): ${bodyPreview}`,
       );
     }
 
@@ -144,7 +142,7 @@ export class AuthService {
       if (configResponse.status !== 200) {
         throw new Error(
           `Failed to load seller config (status ${configResponse.status}): ` +
-            JSON.stringify(configResponse.data)
+            JSON.stringify(configResponse.data),
         );
       }
 
@@ -155,7 +153,7 @@ export class AuthService {
   }
 
   static async getContentMetadata(
-    contentId: string
+    contentId: string,
   ): Promise<IContentMetadata> {
     const seller_token = TokenManager.getSellerToken();
     const response: AxiosResponse<IContentMetadata> =
@@ -169,7 +167,7 @@ export class AuthService {
           // We'll handle non-2xx statuses manually below
           validateStatus: () => true,
           timeout: 10_000,
-        }
+        },
       );
 
     return response.data;
@@ -196,7 +194,7 @@ export class AuthService {
         },
         validateStatus: () => true,
         timeout: 10_000,
-      }
+      },
     );
 
     if (
@@ -246,7 +244,7 @@ export class AuthService {
     email: string,
     password: string,
     first_name: string,
-    last_name: string
+    last_name: string,
   ): Promise<AuthTokens> {
     const response = await ApiClient.post<AuthTokens>("/auth/signup", {
       email,

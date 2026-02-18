@@ -22,11 +22,19 @@ import style from "../style.css?inline";
       return {};
     }
 
-    const apiKey = script.dataset.apiKey;
+    // Prefer script data-api-key; if missing or placeholder, use .env (VITE_API_KEY) for local dev
+    const placeholder = "YOUR_PUBLISHABLE_API_KEY";
+    const scriptKey = script.dataset.apiKey;
+    const apiKey =
+      scriptKey && scriptKey !== placeholder
+        ? scriptKey
+        : (import.meta.env.VITE_API_KEY ?? scriptKey ?? undefined);
 
     // Optional data-external-url override: for testing when dev port differs from backend (e.g. 5174 vs 5173).
+    // Default to origin+pathname to avoid sending sensitive query params (campaign ids, tokens, etc.) to the backend.
     const externalUrl =
-      script.dataset.externalUrl ?? window.location.href;
+      script.dataset.externalUrl ??
+      `${window.location.origin}${window.location.pathname}`;
 
     return {
       apiKey,
@@ -122,7 +130,7 @@ import style from "../style.css?inline";
               document.body.style.overflow = "";
             }}
           />,
-          appRoot
+          appRoot,
         );
       }
     } catch (error) {

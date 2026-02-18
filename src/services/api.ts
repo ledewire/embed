@@ -1,7 +1,10 @@
 /**
  * Core API client for making HTTP requests to LedeWire API
  * Environment-aware configuration for dev/staging/production
+ * Auth token is read via TokenManager (uses configured storage adapter, not raw localStorage).
  */
+
+import { TokenManager } from "./tokenManager";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "https://api.ledewire.com/v1";
@@ -17,7 +20,7 @@ export class ApiClient {
     };
 
     if (includeAuth) {
-      const token = localStorage.getItem("access_token");
+      const token = TokenManager.getAccessToken();
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       }
@@ -32,7 +35,7 @@ export class ApiClient {
         error: `HTTP ${response.status}: ${response.statusText}`,
       }));
       throw new Error(
-        typeof error.error === "string" ? error.error : error.error.message
+        typeof error.error === "string" ? error.error : error.error.message,
       );
     }
 
@@ -58,7 +61,7 @@ export class ApiClient {
   static async post<T>(
     endpoint: string,
     data: any,
-    includeAuth = false
+    includeAuth = false,
   ): Promise<T> {
     // Auto-refresh token if expired
     if (includeAuth) {
@@ -95,7 +98,7 @@ export class ApiClient {
   static async put<T>(
     endpoint: string,
     data: any,
-    includeAuth = false
+    includeAuth = false,
   ): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "PUT",

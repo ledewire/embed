@@ -95,13 +95,16 @@
   <!-- Testing Video 1 = 1137650125 -->
   <!-- Testing Video 2 = 1142082932 -->
 
-  <script src="https://player.vimeo.com/api/player.js"></script>
-  <!-- Page blocker: looks up content by external_url. If dev server port differs from backend (e.g. app on 5174, backend has 5173), set data-external-url to match backend. -->
-  <script type="module" src="/src/entries/page-blocker.tsx" data-api-key="ngdZ2KhcwMwH7UWgXOlqbk99uu6Ax6hUHobnYF0i6BM"
-    data-creator-id="creator_456">
-    </script>
-  <!-- Vimeo blocker: blocks only the Vimeo iframe, looks up content by vimeo_id (use when page has a Vimeo iframe) -->
-  <!-- <script type="module" src="/src/entries/vimeo-blocker.tsx" data-api-key="ngdZ2KhcwMwH7UWgXOlqbk99uu6Ax6hUHobnYF0i6BM"
+    <script src="https://player.vimeo.com/api/player.js"></script>
+    <!-- Page blocker: looks up content by external_url. If dev server port differs from backend (e.g. app on 5174, backend has 5173), set data-external-url to match backend. -->
+    <script
+      type="module"
+      src="/src/entries/page-blocker.tsx"
+      data-api-key="YOUR_PUBLISHABLE_API_KEY"
+      data-creator-id="creator_456"
+    ></script>
+    <!-- Vimeo blocker: blocks only the Vimeo iframe, looks up content by vimeo_id (use when page has a Vimeo iframe) -->
+    <!-- <script type="module" src="/src/entries/vimeo-blocker.tsx" data-api-key="YOUR_PUBLISHABLE_API_KEY"
     data-creator-id="creator_456" data-player="vimeo">
     </script> -->
 </body>

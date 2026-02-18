@@ -1,8 +1,10 @@
 /**
- * Token Manager - Handles storing, retrieving, and refreshing authentication tokens
+ * Token Manager - Handles storing, retrieving, and refreshing authentication tokens.
+ * Uses a configurable storage adapter (default: in-memory) to avoid XSS token theft
+ * in embed contexts. Do not use localStorage for tokens on third-party host pages.
  */
 
-import { ApiClient } from "./api";
+import { getTokenStorage } from "./storageAdapter";
 
 export interface AuthTokens {
   access_token: string;
@@ -10,50 +12,46 @@ export interface AuthTokens {
   expires_at: string;
 }
 
-export class TokenManager {
-  private static STORAGE_KEYS = {
-    ACCESS_TOKEN: "access_token",
-    REFRESH_TOKEN: "refresh_token",
-    EXPIRES_AT: "expires_at",
-    SELLER_TOKEN: "seller_token",
-  };
+const STORAGE_KEYS = {
+  ACCESS_TOKEN: "access_token",
+  REFRESH_TOKEN: "refresh_token",
+  EXPIRES_AT: "expires_at",
+  SELLER_TOKEN: "seller_token",
+};
 
+function storage() {
+  return getTokenStorage();
+}
+
+export class TokenManager {
   /**
-   * Store authentication tokens in localStorage
+   * Store authentication tokens (uses configured adapter; default in-memory)
    */
   static setTokens(tokens: AuthTokens): void {
-    localStorage.setItem(this.STORAGE_KEYS.ACCESS_TOKEN, tokens.access_token);
-    localStorage.setItem(this.STORAGE_KEYS.REFRESH_TOKEN, tokens.refresh_token);
-    localStorage.setItem(this.STORAGE_KEYS.EXPIRES_AT, tokens.expires_at);
+    const s = storage();
+    s.setItem(STORAGE_KEYS.ACCESS_TOKEN, tokens.access_token);
+    s.setItem(STORAGE_KEYS.REFRESH_TOKEN, tokens.refresh_token);
+    s.setItem(STORAGE_KEYS.EXPIRES_AT, tokens.expires_at);
   }
 
-  static setSellerToken(seller_token: string) {
-    localStorage.setItem(this.STORAGE_KEYS.SELLER_TOKEN, seller_token);
+  static setSellerToken(seller_token: string): void {
+    storage().setItem(STORAGE_KEYS.SELLER_TOKEN, seller_token);
   }
 
   static getSellerToken(): string | null {
-    return localStorage.getItem(this.STORAGE_KEYS.SELLER_TOKEN);
+    return storage().getItem(STORAGE_KEYS.SELLER_TOKEN);
   }
 
-  /**
-   * Get access token from localStorage
-   */
   static getAccessToken(): string | null {
-    return localStorage.getItem(this.STORAGE_KEYS.ACCESS_TOKEN);
+    return storage().getItem(STORAGE_KEYS.ACCESS_TOKEN);
   }
 
-  /**
-   * Get refresh token from localStorage
-   */
   static getRefreshToken(): string | null {
-    return localStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN);
+    return storage().getItem(STORAGE_KEYS.REFRESH_TOKEN);
   }
 
-  /**
-   * Get token expiry time from localStorage
-   */
   static getExpiresAt(): string | null {
-    return localStorage.getItem(this.STORAGE_KEYS.EXPIRES_AT);
+    return storage().getItem(STORAGE_KEYS.EXPIRES_AT);
   }
 
   /**
@@ -65,14 +63,11 @@ export class TokenManager {
 
     const expiryTime = new Date(expiresAt).getTime();
     const currentTime = Date.now();
-    const bufferTime = 5 * 60 * 1000; // 5 minutes in milliseconds
+    const bufferTime = 5 * 60 * 1000; // 5 minutes
 
     return currentTime >= expiryTime - bufferTime;
   }
 
-  /**
-   * Check if user is authenticated (has valid tokens)
-   */
   static isAuthenticated(): boolean {
     const accessToken = this.getAccessToken();
     return !!accessToken && !this.isTokenExpired();
@@ -88,20 +83,17 @@ export class TokenManager {
       throw new Error("No refresh token available");
     }
 
-    // Don't include auth in refresh token request to avoid circular dependency
+    const { ApiClient } = await import("./api");
     const response = await ApiClient.post<AuthTokens>(
       "/auth/token/refresh",
       { refresh_token: refreshToken },
-      false // Don't include auth header
+      false,
     );
 
     this.setTokens(response);
     return response;
   }
 
-  /**
-   * Ensure token is valid, refresh if needed
-   */
   static async ensureValidToken(): Promise<string> {
     if (this.isTokenExpired()) {
       const tokens = await this.refreshAccessToken();
@@ -117,17 +109,16 @@ export class TokenManager {
   }
 
   /**
-   * Clear all tokens from localStorage (logout)
+   * Clear all tokens (logout). Seller token is also cleared.
    */
   static clearTokens(): void {
-    localStorage.removeItem(this.STORAGE_KEYS.ACCESS_TOKEN);
-    localStorage.removeItem(this.STORAGE_KEYS.REFRESH_TOKEN);
-    localStorage.removeItem(this.STORAGE_KEYS.EXPIRES_AT);
+    const s = storage();
+    s.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+    s.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    s.removeItem(STORAGE_KEYS.EXPIRES_AT);
+    s.removeItem(STORAGE_KEYS.SELLER_TOKEN);
   }
 
-  /**
-   * Get all tokens as an object
-   */
   static getAllTokens(): AuthTokens | null {
     const access_token = this.getAccessToken();
     const refresh_token = this.getRefreshToken();
