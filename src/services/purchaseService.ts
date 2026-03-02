@@ -6,6 +6,7 @@ import { ApiClient } from "./api";
 
 export interface PurchaseRequest {
   content_id: string;
+  price_cents: number;
 }
 
 export interface PurchaseResponse {
@@ -39,10 +40,13 @@ export class PurchaseService {
   /**
    * Purchase content
    */
-  static async purchaseContent(contentId: string): Promise<PurchaseResponse> {
+  static async purchaseContent(
+    contentId: string,
+    priceCents: number,
+  ): Promise<PurchaseResponse> {
     return await ApiClient.post<PurchaseResponse>(
       "/purchases",
-      { content_id: contentId },
+      { content_id: contentId, price_cents: priceCents },
       true,
     );
   }

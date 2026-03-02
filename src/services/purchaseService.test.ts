@@ -38,12 +38,15 @@ describe('PurchaseService', () => {
       };
       vi.mocked(ApiClient.post).mockResolvedValue(mockResponse);
 
-      const result = await PurchaseService.purchaseContent('content-123');
+      const result = await PurchaseService.purchaseContent(
+        'content-123',
+        99
+      );
 
       expect(result).toEqual(mockResponse);
       expect(ApiClient.post).toHaveBeenCalledWith(
         '/purchases',
-        { content_id: 'content-123' },
+        { content_id: 'content-123', price_cents: 99 },
         true
       );
     });
