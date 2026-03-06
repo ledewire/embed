@@ -19,6 +19,13 @@ Viewers should see a “Unlock to Watch – $X” overlay until they authenticat
 
 ---
 
+### Basic Flow
+The codebase is divided into two main components: the entry point script and the overlay component.
+The entry point script is responsible for detecting the video element and determine weather to show the paywall or not.
+The overlay component is responsible for rendering the paywall and handling user interactions.
+
+This way we can easily swap out the entry point script for a different one, such as a page blocker, without having to modify the overlay component.
+
 ## **Technical Requirements**
 
 ### **Script Tag Format**

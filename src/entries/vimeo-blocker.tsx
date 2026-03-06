@@ -27,9 +27,14 @@ import style from "../style.css?inline"; // Import CSS as inline string
     }
 
     const detectedVideoId = getVimeoVideoId();
-    // const detectedVideoId = "972e539f-effd-4bd3-b550-0b94b421118f"; // FOR TESTING PURPOSE ONLY
+    const placeholder = "YOUR_PUBLISHABLE_API_KEY";
+    const scriptKey = script.dataset.apiKey;
+    const apiKey =
+      scriptKey && scriptKey !== placeholder
+        ? scriptKey
+        : (import.meta.env.VITE_API_KEY ?? scriptKey ?? undefined);
     return {
-      apiKey: script.dataset.apiKey,
+      apiKey,
       contentId: detectedVideoId,
       creatorId: script.dataset.creatorId,
       playerType: script.dataset.player,

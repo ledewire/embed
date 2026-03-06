@@ -42,15 +42,12 @@ export class PurchaseService {
    */
   static async purchaseContent(
     contentId: string,
-    priceCents: number
+    priceCents: number,
   ): Promise<PurchaseResponse> {
     return await ApiClient.post<PurchaseResponse>(
       "/purchases",
-      {
-        content_id: contentId,
-        price_cents: priceCents*100,
-      },
-      true
+      { content_id: contentId, price_cents: priceCents },
+      true,
     );
   }
 
@@ -58,11 +55,12 @@ export class PurchaseService {
    * Verify if content has been purchased
    */
   static async verifyPurchase(
-    contentId: string
+    contentId: string,
   ): Promise<{ has_purchased: boolean }> {
+    const params = new URLSearchParams({ content_id: contentId });
     return await ApiClient.get<{ has_purchased: boolean }>(
-      `/purchase/verify?content_id=${contentId}`,
-      true
+      `/purchase/verify?${params.toString()}`,
+      true,
     );
   }
 
@@ -70,7 +68,7 @@ export class PurchaseService {
    * Create a payment session to add funds to wallet
    */
   static async createPaymentSession(
-    amountCents: number
+    amountCents: number,
   ): Promise<PaymentSessionResponse> {
     return await ApiClient.post<PaymentSessionResponse>(
       "/wallet/payment-session",
@@ -78,7 +76,7 @@ export class PurchaseService {
         amount_cents: amountCents,
         currency: "usd",
       },
-      true
+      true,
     );
   }
 }

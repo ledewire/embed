@@ -174,7 +174,8 @@ export function App({ config, sellerConfig, contentMetadata, onUnlock }: AppProp
       throw new Error("Content ID is required for purchase");
     }
 
-    const priceCents = +contentPrice;
+    // Use same fallback as contentPrice display ($1 = 100 cents)
+    const priceCents = contentMetadata?.price_cents ?? contentPrice * 100;
 
     try {
       await PurchaseService.purchaseContent(config.contentId, priceCents);

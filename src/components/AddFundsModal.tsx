@@ -22,6 +22,8 @@ export function AddFundsModal({
   const [stripe, setStripe] = useState<any>(null);
   const [cardElement, setCardElement] = useState<any>(null);
   const cardElementRef = useRef<HTMLDivElement>(null);
+  const stripeRef = useRef<any>(null);
+  const cardRef = useRef<any>(null);
 
   // Inject minimal styles for modal since it renders outside Shadow DOM
   useEffect(() => {
@@ -78,7 +80,7 @@ export function AddFundsModal({
     try {
       const stripeInstance = (window as any).Stripe(paymentSession.public_key);
       setStripe(stripeInstance);
-      (window as any).__stripe_instance = stripeInstance; // Store globally as backup
+      stripeRef.current = stripeInstance;
 
       const elements = stripeInstance.elements();
       const card = elements.create("card", {
@@ -102,10 +104,7 @@ export function AddFundsModal({
       // Mount card element
       card.mount(cardElementRef.current);
 
-      // Store card element globally as backup
-      (window as any).__card_element = card;
-
-      // Set states immediately
+      cardRef.current = card;
       setCardElement(card);
 
       card.on("change", (event: any) => {
@@ -118,17 +117,18 @@ export function AddFundsModal({
 
       card.on("ready", () => {
         setCardElement(card);
-        (window as any).__card_element = card;
-        setError(null); // Clear any errors when card is ready
+        cardRef.current = card;
+        setError(null);
       });
 
       return () => {
         try {
           card.unmount();
-          delete (window as any).__card_element;
         } catch (e) {
           // Element might already be unmounted
         }
+        cardRef.current = null;
+        stripeRef.current = null;
       };
     } catch (err: any) {
       console.error("Error initializing Stripe:", err);
@@ -164,9 +164,8 @@ export function AddFundsModal({
   };
 
   const handleConfirmPayment = async () => {
-    // Get current references instead of relying on state
-    const currentStripe = stripe || (window as any).__stripe_instance;
-    const currentCard = cardElement || (window as any).__card_element;
+    const currentStripe = stripeRef.current ?? stripe;
+    const currentCard = cardRef.current ?? cardElement;
 
     if (!currentStripe || !currentCard || !paymentSession) {
       setError("Payment not fully initialized. Please try again.");
@@ -184,7 +183,7 @@ export function AddFundsModal({
           payment_method: {
             card: currentCard,
           },
-        }
+        },
       );
 
       if (result.error) {
@@ -609,8 +608,8 @@ export function AddFundsModal({
             {isLoading
               ? "Preparing payment..."
               : !stripeLoaded
-              ? "Loading payment provider..."
-              : `Continue to Payment`}
+                ? "Loading payment provider..."
+                : `Continue to Payment`}
           </button>
         ) : (
           <button
