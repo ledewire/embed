@@ -1,0 +1,58 @@
+{
+  "name": "LedeWire Embed",
+
+  // Node 22 LTS — matches .nvmrc
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+
+  "features": {
+    // Git extras (gh CLI, delta diff)
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  // Forward Vite dev server and CORS proxy ports
+  "forwardPorts": [5173, 5174, 8010],
+  "portsAttributes": {
+    "5173": {
+      "label": "Vite dev server (vimeo)",
+      "onAutoForward": "notify"
+    },
+    "5174": {
+      "label": "Vite dev server (page)",
+      "onAutoForward": "notify"
+    },
+    "8010": {
+      "label": "CORS proxy",
+      "onAutoForward": "silent"
+    }
+  },
+
+  // Upgrade npm to a pinned version, wipe any stale node_modules, then do a clean install
+  "postCreateCommand": "npm install -g npm@11.12.0 && rm -rf node_modules && npm ci",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // TypeScript & JS
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        // Tailwind CSS
+        "bradlc.vscode-tailwindcss",
+        // Vitest test runner UI
+        "vitest.explorer",
+        // GitHub Copilot
+        "github.copilot",
+        "github.copilot-chat"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "typescript.tsdk": "node_modules/typescript/lib",
+        // Use the workspace TypeScript version inside the container
+        "typescript.enablePromptUseWorkspaceTsdk": true
+      }
+    }
+  }
+}
