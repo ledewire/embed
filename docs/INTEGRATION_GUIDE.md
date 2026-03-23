@@ -64,7 +64,7 @@ Place this tag anywhere on the page **after** the Vimeo iframe, ideally just bef
 
 ```html
 <script
-  src="https://cdn.jsdelivr.net/gh/ledewire/embed@v1.0.0/dist/vimeo-blocker.iife.js"
+  src="https://cdn.jsdelivr.net/gh/ledewire/embed@0/dist/vimeo-blocker.iife.js"
   data-api-key="YOUR_PUBLISHABLE_API_KEY"
   data-creator-id="YOUR_CREATOR_ID"
   data-player="vimeo"
