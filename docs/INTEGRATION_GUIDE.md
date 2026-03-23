@@ -31,7 +31,7 @@ Replace `<version>` with the release tag you want to pin to (e.g. `v1.0.0`):
 
 ```
 https://cdn.jsdelivr.net/gh/ledewire/embed@0/dist/vimeo-blocker.iife.js
-https://cdn.jsdelivr.net/gh/ledewire/embed@0>/dist/page-blocker.iife.js
+https://cdn.jsdelivr.net/gh/ledewire/embed@0/dist/page-blocker.iife.js
 ```
 
 Always pin to a specific version in production. See [Version Pinning](#version-pinning) below.
