@@ -30,8 +30,8 @@ There are two embed scripts. Choose based on what you're paywalling:
 Replace `<version>` with the release tag you want to pin to (e.g. `v1.0.0`):
 
 ```
-https://cdn.jsdelivr.net/gh/ledewire/embed@<version>/dist/vimeo-blocker.iife.js
-https://cdn.jsdelivr.net/gh/ledewire/embed@<version>/dist/page-blocker.iife.js
+https://cdn.jsdelivr.net/gh/ledewire/embed@0/dist/vimeo-blocker.iife.js
+https://cdn.jsdelivr.net/gh/ledewire/embed@0>/dist/page-blocker.iife.js
 ```
 
 Always pin to a specific version in production. See [Version Pinning](#version-pinning) below.
@@ -42,10 +42,10 @@ Always pin to a specific version in production. See [Version Pinning](#version-p
 
 ### How It Works
 
-1. On page load the script finds the Vimeo `<iframe>` on the page and immediately disables interaction with it
-2. The Vimeo Player API is sent repeated `pause` commands (retries for 5 seconds to handle slow-loading players)
+1. On page load, the script finds the Vimeo `<iframe>` on the page and immediately disables interaction with it
+2. The Vimeo Player API sends repeated `pause` commands (retries for 5 seconds to handle slow-loading players)
 3. A paywall overlay is positioned directly on top of the iframe
-4. The viewer authenticates and purchases; on success the overlay is removed and the video plays
+4. The viewer authenticates and purchases; on success, the overlay is removed, and the video plays
 
 ### Setup in the LedeWire Dashboard
 
@@ -53,10 +53,10 @@ Before the script tag will work, register your video:
 
 1. Go to **Content → New Content**
 2. Set the content type to **Video**
-3. In the **Metadata** field, add the Vimeo video ID (the numeric ID from your Vimeo URL, e.g. `123456789`)
+3. In the **Metadata** field, add the Vimeo video ID (the numeric ID from your Vimeo URL, e.g., `123456789`)
 4. Set a price and publish
 
-The embed auto-detects the Vimeo ID from the iframe `src` attribute — you do not pass it manually.
+The embed auto-detects the Vimeo ID from the iframe's src attribute — you do not pass it manually.
 
 ### Script Tag
 
@@ -123,9 +123,9 @@ Place this tag anywhere on the page **after** the Vimeo iframe, ideally just bef
 
 ### How It Works
 
-1. On page load the script checks whether the current URL matches the `data-match-pattern` (default: matches everything)
-2. If it matches, a full-viewport blur overlay is rendered over the page and body scrolling is locked
-3. The viewer authenticates and purchases; on success the overlay is removed and scrolling is restored
+1. On page load, the script checks whether the current URL matches the `data-match-pattern` (default: matches everything)
+2. If it matches, a full-viewport blur overlay is rendered over the page, and body scrolling is locked
+3. The viewer authenticates and purchases; on success, the overlay is removed, and scrolling is restored
 4. The page content is never hidden — it is blurred and inaccessible until unlocked
 
 ### Setup in the LedeWire Dashboard
