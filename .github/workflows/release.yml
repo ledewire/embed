@@ -1,0 +1,138 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 1.0.0 — no leading v)"
+        required: true
+        type: string
+      release_notes:
+        description: "Release notes (optional — leave blank for auto-generated)"
+        required: false
+        type: string
+      prerelease:
+        description: "Mark as pre-release (use a version like 1.0.0-beta.1)"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Release v${{ github.event.inputs.version }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Guard against duplicate version tags
+        run: |
+          if git ls-remote --tags origin | grep -q "refs/tags/v${{ github.event.inputs.version }}$"; then
+            echo "ERROR: Tag v${{ github.event.inputs.version }} already exists. Bump the version number."
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test:run
+
+      - name: Bump version in package.json
+        run: |
+          npm version ${{ github.event.inputs.version }} --no-git-tag-version
+
+      - name: Build release bundles
+        run: npm run build
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit dist and version bump
+        run: |
+          git add dist/ package.json package-lock.json
+          git commit -m "chore: release v${{ github.event.inputs.version }}"
+
+      - name: Push version commit
+        run: git push origin HEAD:${{ github.ref_name }}
+
+      - name: Create and push release tag
+        run: |
+          git tag -a "v${{ github.event.inputs.version }}" \
+            -m "Release v${{ github.event.inputs.version }}"
+          git push origin "v${{ github.event.inputs.version }}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_NOTES: ${{ github.event.inputs.release_notes }}
+        run: |
+          VERSION="v${{ github.event.inputs.version }}"
+          REPO="${{ github.repository }}"
+          NOTES_FILE=$(mktemp)
+
+          if [ -z "$INPUT_NOTES" ]; then
+            PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+
+            {
+              echo "## What's Changed"
+              echo ""
+
+              if [ -n "$PREV_TAG" ]; then
+                # One line per commit: linked short SHA + subject, excluding the release bot commit
+                git log --pretty=format:"- [\`%h\`](https://github.com/${REPO}/commit/%H) %s" \
+                  "${PREV_TAG}..HEAD~1" \
+                  | grep -v "chore: release v"
+
+                echo ""
+                echo "**Full Changelog:** https://github.com/${REPO}/compare/${PREV_TAG}...${VERSION}"
+              else
+                echo "Initial release."
+              fi
+            } > "$NOTES_FILE"
+          else
+            echo "$INPUT_NOTES" > "$NOTES_FILE"
+          fi
+
+          PRERELEASE_FLAG=""
+          if [ "${{ github.event.inputs.prerelease }}" = "true" ]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+
+          gh release create "$VERSION" \
+            --title "LedeWire Embed $VERSION" \
+            --notes-file "$NOTES_FILE" \
+            $PRERELEASE_FLAG \
+            dist/vimeo-blocker.iife.js \
+            dist/page-blocker.iife.js \
+            dist/embed.css
+
+      - name: Print CDN URLs
+        run: |
+          VERSION="v${{ github.event.inputs.version }}"
+          echo ""
+          echo "=========================================="
+          echo "  CDN URLs (jsDelivr via GitHub)"
+          echo "=========================================="
+          echo ""
+          echo "  Vimeo blocker:"
+          echo "  https://cdn.jsdelivr.net/gh/ledewire/embed@${VERSION}/dist/vimeo-blocker.iife.js"
+          echo ""
+          echo "  Page blocker:"
+          echo "  https://cdn.jsdelivr.net/gh/ledewire/embed@${VERSION}/dist/page-blocker.iife.js"
+          echo ""

@@ -1,0 +1,22 @@
+Copyright (c) 2026 LedeWire. All rights reserved.
+
+This source code is made available for inspection and integration purposes only.
+
+Permission is granted to embed the compiled distribution files (dist/) on your
+website solely for the purpose of integrating with the LedeWire platform under
+an active LedeWire subscription.
+
+The following are expressly prohibited without prior written permission from
+LedeWire:
+
+  - Copying, modifying, or distributing this source code
+  - Using this source code or any derivative works in competing products
+    or services
+  - Reverse engineering the compiled distribution files beyond what is
+    permitted by applicable law
+
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. IN NO EVENT SHALL LEDEWIRE BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY ARISING FROM THE USE OF THIS SOFTWARE.
+
+For licensing inquiries: legal@ledewire.com

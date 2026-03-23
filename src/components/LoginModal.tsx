@@ -34,7 +34,7 @@ export function LoginModal({
       setError(
         error instanceof Error
           ? error.message
-          : "Google login failed. Please try again."
+          : "Google login failed. Please try again.",
       );
     } finally {
       setIsLoading(false);
@@ -340,7 +340,7 @@ export function LoginModal({
                 color: "#4A7C9C",
                 textDecoration: "none",
               }}
-              onClick={(e) => {
+              onClick={() => {
                 if (!onResetClick) return;
                 onResetClick();
               }}

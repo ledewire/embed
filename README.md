@@ -2,6 +2,15 @@
 
 A lightweight paywall embed script for video content with email authentication.
 
+## 📖 Documentation
+
+| Document                                           | Description                                                                                              |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| [Integration Guide](docs/INTEGRATION_GUIDE.md)     | **Start here if you're embedding on a site.** Script tag usage, attributes, viewer flow, troubleshooting |
+| [CDN Release Roadmap](docs/CDN_RELEASE_ROADMAP.md) | jsDelivr CDN setup, GitHub Actions release process, version pinning                                      |
+| [Architecture](docs/ARCHITECTURE.md)               | How the embed works internally — entry points, Shadow DOM, modal state machine                           |
+| [Testing](docs/TESTING.md)                         | Test coverage summary and how to run tests                                                               |
+
 ## 🚀 Quick Start
 
 ### Development (2 Terminals Required)
@@ -32,7 +41,7 @@ http://localhost:5173
 npm run build
 ```
 
-Output: `dist/ledewire.iife.js` and `dist/embed.css`
+Output: `dist/vimeo-blocker.iife.js`, `dist/page-blocker.iife.js`, and `dist/embed.css`
 
 ## 📁 Environment Configuration
 
@@ -71,7 +80,7 @@ Browser → https://api.ledewire.com/v1 ✅
 ## 🎯 Features
 
 - ✅ Email/Password authentication
-- 🚧 Google OAuth login (UI ready, backend integration pending)
+- � Google OAuth login (coming soon)
 - ✅ Video paywall overlay
 - ✅ Purchase confirmation flow
 - ✅ Token management (JWT)
