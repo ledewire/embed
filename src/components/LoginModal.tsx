@@ -1,6 +1,6 @@
 import { useState } from "preact/hooks";
 import { GoogleLogin } from "@react-oauth/google";
-import { AuthService } from "../services/authService";
+import { getSdkClient } from "../services/sdkClient";
 
 interface LoginModalProps {
   onClose?: () => void;
@@ -25,7 +25,9 @@ export function LoginModal({
     setError(null);
 
     try {
-      await AuthService.loginWithGoogle(credentialResponse.credential);
+      await getSdkClient().auth.loginWithGoogle({
+        id_token: credentialResponse.credential,
+      });
 
       if (onLoginSuccess) {
         setTimeout(() => onLoginSuccess(), 300);
@@ -58,7 +60,7 @@ export function LoginModal({
     setError(null);
 
     try {
-      await AuthService.loginWithEmail(email, password);
+      await getSdkClient().auth.loginWithEmail({ email, password });
 
       if (onLoginSuccess) {
         setTimeout(() => onLoginSuccess(), 300);

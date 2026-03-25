@@ -6,8 +6,7 @@ import { SignupModal } from "./components/SignupModal";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { AddFundsModal } from "./components/AddFundsModal";
 import { AlreadyPurchasedModal } from "./components/AlreadyPurchasedModal";
-import { AuthService } from "./services/authService";
-import { PurchaseService } from "./services/purchaseService";
+import { getSdkClient } from "./services/sdkClient";
 import "./style.css";
 import ResetPassword from "./components/ResetPassword";
 
@@ -21,19 +20,19 @@ interface AppProps {
   };
   sellerConfig?: any;
   contentMetadata?: {
-    id: string,
-    content_type: string,
-    title: string,
-    price_cents: number,
-    content_body: string,
-    teaser: string,
-    visibility: string,
+    id: string;
+    content_type: string;
+    title: string;
+    price_cents: number;
+    content_body: string;
+    teaser: string;
+    visibility: string;
     metadata: {
-      author: string,
-      publish_date: string,
-      read_time: string,
-    },
-    access_info: any
+      author: string;
+      publish_date: string;
+      read_time: string;
+    };
+    access_info: any;
   };
   onUnlock?: () => void;
 }
@@ -48,10 +47,17 @@ type ModalState =
   | "unlocked"
   | "resetPassword";
 
-export function App({ config, sellerConfig, contentMetadata, onUnlock }: AppProps) {
+export function App({
+  config,
+  sellerConfig,
+  contentMetadata,
+  onUnlock,
+}: AppProps) {
   const [modalState, setModalState] = useState<ModalState>("overlay");
   const [userBalance, setUserBalance] = useState("0.00");
-  const contentPrice = contentMetadata?.price_cents ? contentMetadata?.price_cents / 100 : 1;
+  const contentPrice = contentMetadata?.price_cents
+    ? contentMetadata?.price_cents / 100
+    : 1;
   const googleClientId = sellerConfig.google_client_id;
 
   // Helper to unlock content
@@ -65,96 +71,110 @@ export function App({ config, sellerConfig, contentMetadata, onUnlock }: AppProp
   // Helper to fetch and update balance
   const updateBalance = async () => {
     try {
-      const balanceData = await PurchaseService.getWalletBalance();
+      const balanceData = await getSdkClient().wallet.balance();
       setUserBalance((balanceData.balance_cents / 100).toFixed(2));
     } catch (error) {
       // Silent fail - balance stays at default
     }
   };
 
-  // Helper to check if content is already purchased
-  const checkAlreadyPurchased = async (): Promise<boolean> => {
-    if (!config.contentId) return false;
-
-    try {
-      const { has_purchased } = await PurchaseService.verifyPurchase(
-        config.contentId
-      );
-      return has_purchased;
-    } catch (error) {
-      return false;
-    }
+  // Single checkout.state() call drives all state transitions.
+  const getCheckoutAction = async () => {
+    if (!config.contentId) return null;
+    const { checkout_state } = await getSdkClient().checkout.state(
+      config.contentId,
+    );
+    return checkout_state;
   };
 
-  // Check authentication and purchase status on mount
+  // Reset to login modal when the SDK signals that the session has expired.
   useEffect(() => {
-    const checkAuth = async () => {
+    const handler = () => setModalState("login");
+    window.addEventListener("lw:auth-expired", handler);
+    return () => window.removeEventListener("lw:auth-expired", handler);
+  }, []);
+
+  // On mount: silently advance if the user is already authenticated/purchased.
+  useEffect(() => {
+    const checkOnMount = async () => {
       try {
-        const isAuth = await AuthService.ensureAuthenticated();
-        if (!isAuth) return;
-
-        // Check if already purchased
-        if (await checkAlreadyPurchased()) {
-          unlockContent();
-          return;
+        const state = await getCheckoutAction();
+        if (!state) return;
+        switch (state.next_required_action) {
+          case "view_content":
+            unlockContent();
+            break;
+          case "purchase":
+          case "fund_wallet":
+            // Pre-fetch balance so it's ready when the user clicks through.
+            await updateBalance();
+            break;
+          // "authenticate": stay on overlay — wait for user interaction.
         }
-
-        // Fetch wallet balance
-        await updateBalance();
-      } catch (error) {
-        // Silent fail - user will login if needed
+      } catch {
+        // Silent fail — user will interact when ready.
       }
     };
 
-    checkAuth();
+    checkOnMount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handlePurchaseClick = async () => {
-    // Check authentication and refresh token if needed
+    if (!config.contentId) {
+      setModalState("login");
+      return;
+    }
     try {
-      const isLoggedIn = await AuthService.ensureAuthenticated();
-
-      if (isLoggedIn) {
-        setModalState("confirm");
-      } else {
-        setModalState("login");
+      const state = await getCheckoutAction();
+      if (!state) return;
+      switch (state.next_required_action) {
+        case "view_content":
+          return unlockContent();
+        case "authenticate":
+          return setModalState("login");
+        case "fund_wallet":
+          await updateBalance();
+          return setModalState("addFunds");
+        case "purchase":
+          await updateBalance();
+          return setModalState("confirm");
       }
-    } catch (error) {
+    } catch {
       setModalState("login");
     }
   };
 
-  const handleLoginSuccess = async () => {
-    if (await checkAlreadyPurchased()) {
-      setModalState("alreadyPurchased");
-      setTimeout(() => unlockContent(), 2000);
-      return;
-    }
-
-    await updateBalance();
-    setModalState("confirm");
-  };
-
-  const handleSignupSuccess = async () => {
+  // Shared handler for both login and signup success.
+  const handlePostAuth = async () => {
     try {
-      // Check if already purchased
-      const alreadyPurchased = await checkAlreadyPurchased();
-
-      if (alreadyPurchased) {
-        setModalState("alreadyPurchased");
-        setTimeout(() => unlockContent(), 2000);
+      const state = await getCheckoutAction();
+      if (!state) {
+        await updateBalance();
+        setModalState("confirm");
         return;
       }
-
-      // Fetch balance and show confirm modal
+      switch (state.next_required_action) {
+        case "view_content":
+          setModalState("alreadyPurchased");
+          setTimeout(() => unlockContent(), 2000);
+          break;
+        case "fund_wallet":
+          await updateBalance();
+          setModalState("addFunds");
+          break;
+        default:
+          await updateBalance();
+          setModalState("confirm");
+      }
+    } catch {
       await updateBalance();
-      setModalState("confirm");
-    } catch (error) {
-      // Fallback to confirm modal even if there's an error
       setModalState("confirm");
     }
   };
+
+  const handleLoginSuccess = handlePostAuth;
+  const handleSignupSuccess = handlePostAuth;
 
   const handleCloseModal = () => {
     setModalState("overlay");
@@ -174,11 +194,8 @@ export function App({ config, sellerConfig, contentMetadata, onUnlock }: AppProp
       throw new Error("Content ID is required for purchase");
     }
 
-    // Use same fallback as contentPrice display ($1 = 100 cents)
-    const priceCents = contentMetadata?.price_cents ?? contentPrice * 100;
-
     try {
-      await PurchaseService.purchaseContent(config.contentId, priceCents);
+      await getSdkClient().purchases.create({ content_id: config.contentId });
       await updateBalance();
       unlockContent();
     } catch (error: any) {
@@ -257,6 +274,8 @@ export function App({ config, sellerConfig, contentMetadata, onUnlock }: AppProp
   );
 
   return (
-    <GoogleOAuthProvider clientId={googleClientId}>{appContent}</GoogleOAuthProvider>
+    <GoogleOAuthProvider clientId={googleClientId}>
+      {appContent}
+    </GoogleOAuthProvider>
   );
-};
+}

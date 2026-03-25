@@ -1,6 +1,6 @@
 import { render } from "preact";
 import { App } from "../App";
-import { AuthService } from "../services/authService";
+import { createSdkClient, getSdkClient } from "../services/sdkClient";
 import style from "../style.css?inline";
 
 (function () {
@@ -90,26 +90,25 @@ import style from "../style.css?inline";
     try {
       // 1. Authenticate Seller
       if (config.apiKey) {
-        await AuthService.authenticateSeller(config.apiKey);
+        await createSdkClient(config.apiKey);
       }
 
       // 2. Get Seller Config
       let sellerConfig = null;
-      if (config.apiKey) {
-        try {
-          sellerConfig = await AuthService.getConfig(config.apiKey);
-        } catch (e) {
-          console.error("Failed to get seller config:", e);
-        }
+      try {
+        sellerConfig = await getSdkClient().config.getPublic();
+      } catch (e) {
+        console.error("Failed to get seller config:", e);
       }
 
-      // 3. Get Content Metadata by searching with external_url
+      // 3. Get Content Metadata by searching with external_identifier (uri)
       let contentMetadata = undefined;
       if (config.externalUrl) {
         try {
-          contentMetadata = await AuthService.searchContentByMetadata({
-            external_url: config.externalUrl,
+          const results = await getSdkClient().seller.content.search({
+            uri: config.externalUrl,
           });
+          contentMetadata = results[0];
           // Extract the actual content ID from metadata for purchase operations
           if (contentMetadata) {
             config.contentId = contentMetadata.id;
