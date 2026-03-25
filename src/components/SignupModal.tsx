@@ -1,6 +1,6 @@
 import { useState } from "preact/hooks";
 import { GoogleLogin } from "@react-oauth/google";
-import { AuthService } from "../services/authService";
+import { getSdkClient } from "../services/sdkClient";
 
 interface SignupModalProps {
   onClose?: () => void;
@@ -25,7 +25,9 @@ export function SignupModal({
     setError(null);
 
     try {
-      await AuthService.loginWithGoogle(credentialResponse.credential);
+      await getSdkClient().auth.loginWithGoogle({
+        id_token: credentialResponse.credential,
+      });
 
       if (onSignupSuccess) {
         setTimeout(() => onSignupSuccess(), 300);
@@ -34,7 +36,7 @@ export function SignupModal({
       setError(
         error instanceof Error
           ? error.message
-          : "Google signup failed. Please try again."
+          : "Google signup failed. Please try again.",
       );
     } finally {
       setIsLoading(false);
@@ -58,7 +60,12 @@ export function SignupModal({
     setError(null);
 
     try {
-      await AuthService.signup(email, password, firstName, lastName);
+      await getSdkClient().auth.signup({
+        email,
+        password,
+        first_name: firstName,
+        last_name: lastName,
+      });
 
       if (onSignupSuccess) {
         setTimeout(() => onSignupSuccess(), 300);

@@ -2,28 +2,15 @@
  * Authentication Service - Handles login, signup, and OAuth flows
  */
 
-import axios, { AxiosResponse } from "axios";
-import { ApiClient } from "./api";
-import { TokenManager, AuthTokens } from "./tokenManager";
+import { getSdkClient } from "./sdkClient";
 
-export interface EmailLoginRequest {
-  email: string;
-  password: string;
-}
+// Default key used by the SDK's sessionStorageAdapter (see @ledewire/browser index.js).
+const TOKEN_STORAGE_KEY = "lw:tokens";
 
-export interface GoogleLoginRequest {
-  id_token: string;
-}
-
-export interface SignupRequest {
-  email: string;
-  password: string;
-  first_name: string;
-  last_name: string;
-}
-
-interface IConfigResponse {
-  google_client_id: string;
+export interface AuthTokens {
+  access_token: string;
+  refresh_token: string;
+  expires_at: string;
 }
 
 export interface IContentMetadata {
@@ -42,135 +29,34 @@ export interface IContentMetadata {
   access_info: any;
 }
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "https://api.ledewire.com/v1";
-
 export class AuthService {
-  /**
-   * Login with email and password
-   */
   static async loginWithEmail(
     email: string,
     password: string,
   ): Promise<AuthTokens> {
-    const response = await ApiClient.post<AuthTokens>("/auth/login/email", {
+    const response = await getSdkClient().auth.loginWithEmail({
       email,
       password,
     });
-
-    TokenManager.setTokens(response);
-    return response;
+    return response as unknown as AuthTokens;
   }
 
-  /**
-   * Login with Google OAuth
-   */
-  /**
-   * Login with Google OAuth
-   */
   static async loginWithGoogle(idToken: string): Promise<void> {
-    const config = {
-      method: "POST",
-      url: `${API_BASE_URL}/auth/login/google`,
-      data: JSON.stringify({
-        id_token: idToken,
-      }),
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-      // Don't throw on HTTP error status codes - we'll handle them manually
-      validateStatus: () => true,
-    };
-
-    await axios(config);
+    await getSdkClient().auth.loginWithGoogle({ id_token: idToken });
   }
 
-  static async authenticateSeller(apiKey: string) {
-    if (!apiKey) {
-      console.error("Missing API_KEY");
-      throw new Error("Missing API_KEY");
-    }
-
-    const url = `${API_BASE_URL}/auth/login/api-key`;
-    const payload = { key: apiKey };
-
-    // use axios.post with generic for typed response
-    const response: AxiosResponse<{
-      access_token: string;
-    }> = await axios.post<{
-      access_token: string;
-    }>(url, payload, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      // We'll handle non-2xx statuses manually below
-      validateStatus: () => true,
-      timeout: 10_000,
-    });
-
-    if (response.status < 200 || response.status >= 300) {
-      const bodyPreview = response.data
-        ? JSON.stringify(response.data)
-        : "no body";
-      throw new Error(
-        `Auth request failed (status ${response.status}): ${bodyPreview}`,
-      );
-    }
-
-    if (!response.data || typeof response.data.access_token !== "string") {
-      throw new Error("Auth response missing accessToken");
-    }
-    TokenManager.setSellerToken(response.data.access_token);
-
-    return response.data.access_token;
-  }
-
-  static async getConfig(apiKey: string): Promise<IConfigResponse> {
-    try {
-      let sellerAccessToken = TokenManager.getSellerToken();
-      if (!sellerAccessToken) {
-        sellerAccessToken = await this.authenticateSeller(apiKey);
-      }
-      const configResponse = await axios.get(`${API_BASE_URL}/seller/config`, {
-        headers: {
-          Authorization: `Bearer ${sellerAccessToken}`,
-          "Content-Type": "application/json",
-        },
-        validateStatus: () => true, // handle errors manually
-      });
-
-      if (configResponse.status !== 200) {
-        throw new Error(
-          `Failed to load seller config (status ${configResponse.status}): ` +
-            JSON.stringify(configResponse.data),
-        );
-      }
-
-      return configResponse.data;
-    } catch (error) {
-      throw error;
-    }
+  // _apiKey retained for call-site compatibility; SDK uses the key from init().
+  static async getConfig(
+    _apiKey: string,
+  ): Promise<{ google_client_id: string }> {
+    return getSdkClient().config.getPublic();
   }
 
   static async getContentMetadata(
     contentId: string,
   ): Promise<IContentMetadata> {
-    const seller_token = TokenManager.getSellerToken();
-    const response: AxiosResponse<IContentMetadata> =
-      await axios.get<IContentMetadata>(
-        `${API_BASE_URL}/content/${contentId}/with-access`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${seller_token}`,
-          },
-          // We'll handle non-2xx statuses manually below
-          validateStatus: () => true,
-          timeout: 10_000,
-        },
-      );
-
-    return response.data;
+    const result = await getSdkClient().content.getWithAccess(contentId);
+    return result as unknown as IContentMetadata;
   }
 
   /**
@@ -181,40 +67,14 @@ export class AuthService {
     vimeo_id?: string;
     external_url?: string;
   }): Promise<IContentMetadata | undefined> {
-    const seller_token = TokenManager.getSellerToken();
-    const response: AxiosResponse<IContentMetadata[]> = await axios.post<
-      IContentMetadata[]
-    >(
-      `${API_BASE_URL}/seller/content/search`,
-      { metadata },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${seller_token}`,
-        },
-        validateStatus: () => true,
-        timeout: 10_000,
-      },
-    );
-
-    if (
-      response.status !== 200 ||
-      !Array.isArray(response.data) ||
-      response.data.length === 0
-    ) {
-      return undefined;
-    }
-
-    // Return the first matching content
-    return response.data[0];
+    // Note: metadata fields are untyped in SellerContentSearchRequest (SDK feedback #5).
+    const results = await getSdkClient().seller.content.search({ metadata });
+    if (results.length === 0) return undefined;
+    return results[0] as unknown as IContentMetadata;
   }
 
   static async getResetCode(email: string): Promise<{ message: string }> {
-    const response: AxiosResponse<{ message: string }> = await axios.post<{
-      message: string;
-    }>(`${API_BASE_URL}/auth/password/reset-request`, { email });
-
-    return response.data;
+    return getSdkClient().auth.requestPasswordReset({ email });
   }
 
   static async setNewPassword({
@@ -226,71 +86,45 @@ export class AuthService {
     newPassword: string;
     otp: string;
   }): Promise<{ message: string }> {
-    const response: AxiosResponse<{ message: string }> = await axios.post<{
-      message: string;
-    }>(`${API_BASE_URL}/auth/password/reset`, {
-      email: email,
-      password: newPassword,
+    return getSdkClient().auth.resetPassword({
+      email,
       reset_code: otp,
+      password: newPassword,
     });
-
-    return response.data;
   }
 
-  /**
-   * Sign up with email and password
-   */
   static async signup(
     email: string,
     password: string,
     first_name: string,
     last_name: string,
   ): Promise<AuthTokens> {
-    const response = await ApiClient.post<AuthTokens>("/auth/signup", {
+    const response = await getSdkClient().auth.signup({
       email,
       password,
       first_name,
       last_name,
     });
-
-    TokenManager.setTokens(response);
-    return response;
+    return response as unknown as AuthTokens;
   }
 
-  /**
-   * Logout the current user
-   */
   static logout(): void {
-    TokenManager.clearTokens();
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
   }
 
-  /**
-   * Check if user is authenticated (synchronous)
-   */
   static isAuthenticated(): boolean {
-    return TokenManager.isAuthenticated();
-  }
-
-  /**
-   * Ensure user is authenticated with a valid token (async, refreshes if needed)
-   */
-  static async ensureAuthenticated(): Promise<boolean> {
+    const raw = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+    if (!raw) return false;
     try {
-      const accessToken = TokenManager.getAccessToken();
-      if (!accessToken) return false;
-
-      // This will trigger a refresh if the token is expired
-      await TokenManager.ensureValidToken();
-      return true;
-    } catch (error) {
+      const { expiresAt } = JSON.parse(raw) as { expiresAt: number };
+      return Date.now() < expiresAt;
+    } catch {
       return false;
     }
   }
 
-  /**
-   * Get current access token (refresh if needed)
-   */
-  static async getAccessToken(): Promise<string> {
-    return TokenManager.ensureValidToken();
+  // Phase 4 will replace all callers with lw.checkout.state().
+  static async ensureAuthenticated(): Promise<boolean> {
+    return AuthService.isAuthenticated();
   }
 }

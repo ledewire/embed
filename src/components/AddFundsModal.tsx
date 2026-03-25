@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "preact/hooks";
 import { createPortal } from "preact/compat";
-import { PurchaseService } from "../services/purchaseService";
+import { getSdkClient } from "../services/sdkClient";
 
 interface AddFundsModalProps {
   onClose?: () => void;
@@ -154,7 +154,10 @@ export function AddFundsModal({
     try {
       // Create payment session
       const amountCents = Math.round(amount * 100);
-      const session = await PurchaseService.createPaymentSession(amountCents);
+      const session = await getSdkClient().wallet.createPaymentSession({
+        amount_cents: amountCents,
+        currency: "usd",
+      });
       setPaymentSession(session);
       setIsLoading(false);
     } catch (err: any) {

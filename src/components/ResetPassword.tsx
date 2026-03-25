@@ -1,6 +1,5 @@
 import { useState } from "preact/hooks";
-import { AuthService } from "../services/authService";
-import { AxiosError } from "axios";
+import { getSdkClient } from "../services/sdkClient";
 
 interface LoginModalProps {
   onClose?: () => void;
@@ -39,14 +38,13 @@ const ResetPassword = ({ onClose, backToLogin }: LoginModalProps) => {
     e.preventDefault();
     try {
       setIsLoading(true);
-      await AuthService.getResetCode(email);
+      await getSdkClient().auth.requestPasswordReset({ email });
       setIsOtpSent(true);
       setIsLoading(false);
       setError("");
     } catch (error) {
       setIsLoading(false);
-      const err = error as AxiosError<{ error: { message: string } }>;
-      setError(err?.response?.data?.error?.message || "Something went wrong");
+      setError(error instanceof Error ? error.message : "Something went wrong");
     }
   };
 
@@ -63,15 +61,18 @@ const ResetPassword = ({ onClose, backToLogin }: LoginModalProps) => {
 
     try {
       setIsLoading(true);
-      await AuthService.setNewPassword({ email, newPassword, otp });
+      await getSdkClient().auth.resetPassword({
+        email,
+        reset_code: otp,
+        password: newPassword,
+      });
       setIsLoading(false);
       setError("");
       if (onClose) onClose();
     } catch (error) {
       setIsLoading(false);
-      const err = error as AxiosError<{ error: { message: string } }>;
       setError(
-        err?.response?.data?.error?.message || "Failed to reset password"
+        error instanceof Error ? error.message : "Failed to reset password",
       );
     }
   };

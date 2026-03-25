@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/preact';
-import { SignupModal } from './SignupModal';
-import { AuthService } from '../services/authService';
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
+import { SignupModal } from "./SignupModal";
+import { getSdkClient } from "../services/sdkClient";
 
-vi.mock('@react-oauth/google', () => ({
+vi.mock("@react-oauth/google", () => ({
   GoogleLogin: ({
     onSuccess,
     onError,
@@ -12,7 +12,7 @@ vi.mock('@react-oauth/google', () => ({
     onError: () => void;
   }) => (
     <div>
-      <button onClick={() => onSuccess({ credential: 'google-token' })}>
+      <button onClick={() => onSuccess({ credential: "google-token" })}>
         Google Success
       </button>
       <button onClick={onError}>Google Error</button>
@@ -20,94 +20,97 @@ vi.mock('@react-oauth/google', () => ({
   ),
 }));
 
-vi.mock('../services/authService', () => ({
-  AuthService: {
+vi.mock("../services/sdkClient", () => ({ getSdkClient: vi.fn() }));
+
+const mockLw = {
+  auth: {
     signup: vi.fn(),
     loginWithGoogle: vi.fn(),
   },
-}));
+};
 
-describe('SignupModal', () => {
+describe("SignupModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
+    vi.mocked(getSdkClient).mockReturnValue(mockLw as any);
   });
 
-  it('renders signup UI', () => {
+  it("renders signup UI", () => {
     render(<SignupModal />);
-    expect(screen.getByText('Create your account')).toBeInTheDocument();
+    expect(screen.getByText("Create your account")).toBeInTheDocument();
   });
 
-  it('shows validation error when fields are empty', () => {
+  it("shows validation error when fields are empty", () => {
     const { container } = render(<SignupModal />);
-    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
-    expect(screen.getByText('Please fill in all fields')).toBeInTheDocument();
+    fireEvent.submit(container.querySelector("form") as HTMLFormElement);
+    expect(screen.getByText("Please fill in all fields")).toBeInTheDocument();
   });
 
-  it('submits signup and calls success callback', async () => {
+  it("submits signup and calls success callback", async () => {
     vi.useFakeTimers();
-    vi.mocked(AuthService.signup).mockResolvedValue({
-      access_token: 'a',
-      refresh_token: 'r',
+    mockLw.auth.signup.mockResolvedValue({
+      access_token: "a",
+      refresh_token: "r",
       expires_at: new Date(Date.now() + 60000).toISOString(),
     });
     const onSignupSuccess = vi.fn();
 
     render(<SignupModal onSignupSuccess={onSignupSuccess} />);
     const passwordInput = document.querySelector(
-      'input[type="password"]'
+      'input[type="password"]',
     ) as HTMLInputElement;
-    const textboxes = screen.getAllByRole('textbox');
-    fireEvent.input(textboxes[0], { target: { value: 'Jane' } });
-    fireEvent.input(textboxes[1], { target: { value: 'Doe' } });
-    fireEvent.input(textboxes[2], { target: { value: 'jane@test.com' } });
-    fireEvent.input(passwordInput, { target: { value: 'password123' } });
+    const textboxes = screen.getAllByRole("textbox");
+    fireEvent.input(textboxes[0], { target: { value: "Jane" } });
+    fireEvent.input(textboxes[1], { target: { value: "Doe" } });
+    fireEvent.input(textboxes[2], { target: { value: "jane@test.com" } });
+    fireEvent.input(passwordInput, { target: { value: "password123" } });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign Up" }));
 
     await waitFor(() => {
-      expect(AuthService.signup).toHaveBeenCalledWith(
-        'jane@test.com',
-        'password123',
-        'Jane',
-        'Doe'
-      );
+      expect(mockLw.auth.signup).toHaveBeenCalledWith({
+        email: "jane@test.com",
+        password: "password123",
+        first_name: "Jane",
+        last_name: "Doe",
+      });
     });
     await vi.advanceTimersByTimeAsync(300);
     expect(onSignupSuccess).toHaveBeenCalledTimes(1);
   });
 
-  it('shows error when signup fails', async () => {
-    vi.mocked(AuthService.signup).mockRejectedValue(new Error('Signup failed'));
+  it("shows error when signup fails", async () => {
+    mockLw.auth.signup.mockRejectedValue(new Error("Signup failed"));
 
     render(<SignupModal />);
     const passwordInput = document.querySelector(
-      'input[type="password"]'
+      'input[type="password"]',
     ) as HTMLInputElement;
-    const textboxes = screen.getAllByRole('textbox');
-    fireEvent.input(textboxes[0], { target: { value: 'Jane' } });
-    fireEvent.input(textboxes[1], { target: { value: 'Doe' } });
-    fireEvent.input(textboxes[2], { target: { value: 'jane@test.com' } });
-    fireEvent.input(passwordInput, { target: { value: 'password123' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
+    const textboxes = screen.getAllByRole("textbox");
+    fireEvent.input(textboxes[0], { target: { value: "Jane" } });
+    fireEvent.input(textboxes[1], { target: { value: "Doe" } });
+    fireEvent.input(textboxes[2], { target: { value: "jane@test.com" } });
+    fireEvent.input(passwordInput, { target: { value: "password123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Sign Up" }));
 
     await waitFor(() => {
-      expect(screen.getByText('Signup failed')).toBeInTheDocument();
+      expect(screen.getByText("Signup failed")).toBeInTheDocument();
     });
   });
 
-  it('triggers switch to login callback', () => {
+  it("triggers switch to login callback", () => {
     const onSwitchToLogin = vi.fn();
     render(<SignupModal onSwitchToLogin={onSwitchToLogin} />);
-    fireEvent.click(screen.getByText('Log in'));
+    fireEvent.click(screen.getByText("Log in"));
     expect(onSwitchToLogin).toHaveBeenCalledTimes(1);
   });
 
-  it('shows Google signup error', () => {
+  it("shows Google signup error", () => {
     render(<SignupModal />);
-    fireEvent.click(screen.getByText('Google Error'));
+    fireEvent.click(screen.getByText("Google Error"));
     expect(
-      screen.getByText('Google signup failed. Please try again.')
+      screen.getByText("Google signup failed. Please try again."),
     ).toBeInTheDocument();
   });
 });

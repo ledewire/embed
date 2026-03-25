@@ -1,12 +1,12 @@
 import { render } from "preact";
 import { App } from "../App";
-import { AuthService } from "../services/authService";
+import { createSdkClient, getSdkClient } from "../services/sdkClient";
 import style from "../style.css?inline"; // Import CSS as inline string
 
 (async function () {
   function getVimeoVideoId() {
     const iframe = document.querySelector(
-      "iframe[src*='player.vimeo.com/video']"
+      "iframe[src*='player.vimeo.com/video']",
     ) as HTMLIFrameElement | null;
     if (!iframe) return null;
 
@@ -140,26 +140,25 @@ import style from "../style.css?inline"; // Import CSS as inline string
   try {
     // 1. Authenticate Seller
     if (config.apiKey) {
-      await AuthService.authenticateSeller(config.apiKey);
+      await createSdkClient(config.apiKey);
     }
 
     // 2. Get Seller Config
     let sellerConfig = null;
-    if (config.apiKey) {
-      try {
-        sellerConfig = await AuthService.getConfig(config.apiKey);
-      } catch (e) {
-        console.error("Failed to get seller config:", e);
-      }
+    try {
+      sellerConfig = await getSdkClient().config.getPublic();
+    } catch (e) {
+      console.error("Failed to get seller config:", e);
     }
 
-    // 3. Get Content Metadata by searching with vimeo_id
+    // 3. Get Content Metadata by searching with external_identifier (vimeo:id)
     let contentMetadata = undefined;
     if (config.contentId) {
       try {
-        contentMetadata = await AuthService.searchContentByMetadata({
-          vimeo_id: config.contentId,
+        const results = await getSdkClient().seller.content.search({
+          external_identifier: `vimeo:${config.contentId}`,
         });
+        contentMetadata = results[0];
         // Extract the actual content ID from metadata for purchase operations
         if (contentMetadata) {
           config.contentId = contentMetadata.id;
@@ -183,7 +182,7 @@ import style from "../style.css?inline"; // Import CSS as inline string
           }, 300);
         }}
       />,
-      appRoot
+      appRoot,
     );
   } catch (error) {
     console.error("Initialization failed:", error);
