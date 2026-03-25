@@ -1,27 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { waitFor } from "@testing-library/preact";
-import { AuthService } from "../services/authService";
+import { createSdkClient, getSdkClient } from "../services/sdkClient";
 
 vi.mock("@react-oauth/google", () => ({
   GoogleOAuthProvider: ({ children }: { children: unknown }) => children,
   GoogleLogin: () => null,
 }));
 
-vi.mock("../services/authService", () => ({
-  AuthService: {
-    authenticateSeller: vi.fn(),
-    getConfig: vi.fn(),
-    searchContentByMetadata: vi.fn(),
-  },
+vi.mock("../services/sdkClient", () => ({
+  createSdkClient: vi.fn(),
+  getSdkClient: vi.fn(),
 }));
 
-vi.mock("../services/purchaseService", () => ({
-  PurchaseService: {
-    getWalletBalance: vi.fn(),
-    verifyPurchase: vi.fn(),
-    purchaseContent: vi.fn(),
-  },
-}));
+const mockLw = {
+  config: { getPublic: vi.fn() },
+  seller: { content: { search: vi.fn() } },
+};
 
 vi.mock("../style.css?inline", () => ({
   default: "/* mock styles */",
@@ -33,21 +27,24 @@ describe("vimeo-blocker entry", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(AuthService.authenticateSeller).mockResolvedValue("seller-token");
-    vi.mocked(AuthService.getConfig).mockResolvedValue({
+    vi.mocked(createSdkClient).mockResolvedValue({} as any);
+    vi.mocked(getSdkClient).mockReturnValue(mockLw as any);
+    mockLw.config.getPublic.mockResolvedValue({
       google_client_id: "google-id",
     });
-    vi.mocked(AuthService.searchContentByMetadata).mockResolvedValue({
-      id: "content-789",
-      content_type: "video",
-      title: "Test Video",
-      price_cents: 299,
-      content_body: "",
-      teaser: "",
-      visibility: "premium",
-      metadata: { author: "", publish_date: "", read_time: "" },
-      access_info: null,
-    });
+    mockLw.seller.content.search.mockResolvedValue([
+      {
+        id: "content-789",
+        content_type: "video",
+        title: "Test Video",
+        price_cents: 299,
+        content_body: "",
+        teaser: "",
+        visibility: "premium",
+        metadata: {},
+        access_info: null,
+      },
+    ]);
 
     scriptEl = document.createElement("script");
     scriptEl.dataset.apiKey = "test-api-key";
@@ -84,10 +81,10 @@ describe("vimeo-blocker entry", () => {
       { timeout: 2000 },
     );
 
-    expect(AuthService.authenticateSeller).toHaveBeenCalledWith("test-api-key");
-    expect(AuthService.getConfig).toHaveBeenCalledWith("test-api-key");
-    expect(AuthService.searchContentByMetadata).toHaveBeenCalledWith({
-      vimeo_id: "12345678",
+    expect(createSdkClient).toHaveBeenCalledWith("test-api-key");
+    expect(mockLw.config.getPublic).toHaveBeenCalled();
+    expect(mockLw.seller.content.search).toHaveBeenCalledWith({
+      external_identifier: "vimeo:12345678",
     });
   });
 
@@ -98,7 +95,8 @@ describe("vimeo-blocker entry", () => {
 
     await new Promise((r) => setTimeout(r, 200));
 
-    expect(AuthService.authenticateSeller).not.toHaveBeenCalled();
-    expect(AuthService.searchContentByMetadata).not.toHaveBeenCalled();
+    expect(createSdkClient).not.toHaveBeenCalled();
+    expect(mockLw.seller.content.search).not.toHaveBeenCalled();
   });
 });
+

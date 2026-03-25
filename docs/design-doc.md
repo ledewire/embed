@@ -1,20 +1,24 @@
 # **LedeWire HTML5 Pay-to-Unlock Embed (MVP Engineering Brief)**
 
+> **Historical document.** This is the original MVP brief written before the SDK (`@ledewire/browser`) existed. The implementation has since evolved significantly — see the [Integration Guide](integration-guide.md) for current usage and the source code for current architecture. This document is preserved as a record of the original design intent.
+
+---
+
 ### **Objective**
 
-Create a lightweight embeddable JavaScript file (`ledewire.js`) that allows creators to monetize individual videos (Vimeo or HTML5) through the existing LedeWire API.  
+Create a lightweight embeddable JavaScript file (`ledewire.js`) that allows creators to monetize individual videos (Vimeo or HTML5) through the existing LedeWire API.
 Viewers should see a “Unlock to Watch – $X” overlay until they authenticate and complete a purchase.
 
 ---
 
 ## **🧱 High-Level Architecture**
 
-**Core Idea:**  
+**Core Idea:**
  A single script tag inserted into any page should:
 
-1. Detect the video (Vimeo iframe or `<video>` element).  
-2. Render a paywall overlay with price and unlock button.  
-3. On click, authenticate the user and call `/v1/purchase`.  
+1. Detect the video (Vimeo iframe or `<video>` element).
+2. Render a paywall overlay with price and unlock button.
+3. On click, authenticate the user and call `/v1/purchase`.
 4. On success, remove the overlay and trigger playback.
 
 ---
@@ -65,7 +69,7 @@ Creators will use:
   const playerType = script.dataset.player;
   const creatorId = script.dataset.creatorId;
 
-  // 1️⃣ Locate video element  
+  // 1️⃣ Locate video element
   let videoEl;
   if (playerType === 'vimeo') {
     videoEl = document.querySelector('iframe[src*="vimeo.com"]');
@@ -79,52 +83,52 @@ Creators will use:
   const overlay = document.createElement('div');
   overlay.className = 'ledewire-overlay';
    overlay.innerHTML =
-    <div class="ledewire-lock">  
-      <p>Unlock to Watch – $${price}</p>  
-      <button id="ledewire-purchase">Unlock Now</button>  
-    </div>  
-   ;   
-  videoEl.parentElement.style.position = 'relative';  
-   overlay.style.cssText =    
-    position:absolute;top:0;left:0;width:100%;height:100%;  
-    background:rgba(0,0,0,0.8);display:flex;  
-    align-items:center;justify-content:center;  
-    color:white;z-index:9999;  
-   ;   
+    <div class="ledewire-lock">
+      <p>Unlock to Watch – $${price}</p>
+      <button id="ledewire-purchase">Unlock Now</button>
+    </div>
+   ;
+  videoEl.parentElement.style.position = 'relative';
+   overlay.style.cssText =
+    position:absolute;top:0;left:0;width:100%;height:100%;
+    background:rgba(0,0,0,0.8);display:flex;
+    align-items:center;justify-content:center;
+    color:white;z-index:9999;
+   ;
   videoEl.parentElement.appendChild(overlay);
 
-  // 3️⃣ Purchase flow  
-  document.getElementById('ledewire-purchase').onclick = async () => {  
-    try {  
-      // 3a: Check auth  
+  // 3️⃣ Purchase flow
+  document.getElementById('ledewire-purchase').onclick = async () => {
+    try {
+      // 3a: Check auth
       const auth = await fetch('/v1/checkout/state/' + contentId, {credentials: 'include'}).then(r=>r.json());
-      if (auth.next_required_action === 'authenticate') {  
-        return openAuthModal(); // use existing LedeWire auth modal  
+      if (auth.next_required_action === 'authenticate') {
+        return openAuthModal(); // use existing LedeWire auth modal
       }
 
-      // 3b: Fund wallet or purchase  
-      if (auth.next_required_action === 'purchase') {  
-        await fetch('/v1/purchases', {  
-          method: 'POST',  
-          headers: {'Content-Type': 'application/json'},  
-          credentials: 'include',  
-          body: JSON.stringify({ content_id: contentId, price_cents: Math.round(parseFloat(price) * 100) })  
-        });  
+      // 3b: Fund wallet or purchase
+      if (auth.next_required_action === 'purchase') {
+        await fetch('/v1/purchases', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'include',
+          body: JSON.stringify({ content_id: contentId, price_cents: Math.round(parseFloat(price) * 100) })
+        });
       }
 
-      // 3c: Unlock  
-      overlay.remove();  
-      if (playerType === 'vimeo') {  
-        const player = new Vimeo.Player(videoEl);  
-        player.play();  
-      } else {  
-        videoEl.play();  
+      // 3c: Unlock
+      overlay.remove();
+      if (playerType === 'vimeo') {
+        const player = new Vimeo.Player(videoEl);
+        player.play();
+      } else {
+        videoEl.play();
       }
 
-    } catch (err) {  
-      console.error('LedeWire Purchase Error:', err);  
-    }  
-  };  
+    } catch (err) {
+      console.error('LedeWire Purchase Error:', err);
+    }
+  };
 })();
 ```
 ---
@@ -142,58 +146,58 @@ Creators will use:
 
 ## **🎨 Minimal CSS (Inline or CDN)**
 ```css
-.ledewire-overlay {  
-  position: absolute;  
-  top: 0; left: 0;  
-  width: 100%; height: 100%;  
-  background: rgba(0,0,0,0.75);  
-  display: flex; align-items: center; justify-content: center;  
-  flex-direction: column;  
-  color: #fff;  
-  font-family: sans-serif;  
+.ledewire-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.75);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column;
+  color: #fff;
+  font-family: sans-serif;
 }
 
-.ledewire-lock button {  
-  background: #00aaff;  
-  border: none;  
-  padding: 0.6em 1.2em;  
-  border-radius: 4px;  
-  color: #fff;  
-  font-weight: bold;  
-  cursor: pointer;  
+.ledewire-lock button {
+  background: #00aaff;
+  border: none;
+  padding: 0.6em 1.2em;
+  border-radius: 4px;
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
 }
 ```
 ---
 
 ## **Optional Phase 2 Enhancements (after MVP)**
 
-* Auto-detect “already purchased” state on page load (skip overlay).  
-* Add `/ahoy/events` calls for analytics (“unlock\_clicked”, “video\_unlocked”).  
-* Add data attributes for styling (`data-theme`, `data-button-text`).  
+* Auto-detect “already purchased” state on page load (skip overlay).
+* Add `/ahoy/events` calls for analytics (“unlock\_clicked”, “video\_unlocked”).
+* Add data attributes for styling (`data-theme`, `data-button-text`).
 * Support YouTube/Wistia players using the same unlock interface.
 
 ---
 
 ##  **Acceptance Criteria**
 
-* Loads on any HTML page with a single `<script>` tag.  
-* Works for both Vimeo iframe and native HTML5 `<video>`  
-* Uses live `/v1/purchase` API endpoint for transactions.  
-* Displays and removes overlay cleanly.  
-* No external dependencies.  
+* Loads on any HTML page with a single `<script>` tag.
+* Works for both Vimeo iframe and native HTML5 `<video>`
+* Uses live `/v1/purchase` API endpoint for transactions.
+* Displays and removes overlay cleanly.
+* No external dependencies.
 * No cross-origin or CSP violations.
 
 ---
 
 ## **Stretch Deliverables (Week 2\)**
 
-* `beehiivAdapter.js`: small wrapper that injects the same logic into Beehiiv posts.  
+* `beehiivAdapter.js`: small wrapper that injects the same logic into Beehiiv posts.
 * Simple CLI or static generator to produce embed snippet from a content\_id \+ price.
 
 ---
 
-**Outcome:**  
- By the end of Week 1, you’ll have a fully working video paywall you can hand to your first creator.  
+**Outcome:**
+ By the end of Week 1, you’ll have a fully working video paywall you can hand to your first creator.
  They can drop one `<script>` tag into their Vimeo or HTML5 player page and start generating revenue.
 
 ---

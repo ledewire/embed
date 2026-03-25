@@ -1,4 +1,4 @@
-# LedeWire Embed — Integration Guide
+# @ledewire/gate — Integration Guide
 
 This guide covers everything needed to add a LedeWire paywall to your website using the embed script. No JavaScript knowledge is required beyond copy-pasting a `<script>` tag.
 
@@ -52,11 +52,11 @@ Always pin to a specific version in production. See [Version Pinning](#version-p
 Before the script tag will work, register your video:
 
 1. Go to **Content → New Content**
-2. Set the content type to **Video**
-3. In the **Metadata** field, add the Vimeo video ID (the numeric ID from your Vimeo URL, e.g., `123456789`)
+2. Set the content type to **Video** / **External Ref**
+3. Set the **External Identifier** field to `vimeo:` followed by your Vimeo video ID — e.g. `vimeo:123456789` (the numeric ID from your Vimeo URL)
 4. Set a price and publish
 
-The embed auto-detects the Vimeo ID from the iframe's src attribute — you do not pass it manually.
+The embed auto-detects the Vimeo ID from the iframe's `src` attribute and looks up content by that identifier — you do not pass the ID manually in the script tag.
 
 ### Script Tag
 
@@ -79,11 +79,6 @@ Place this tag anywhere on the page **after** the Vimeo iframe, ideally just bef
 | `data-creator-id` | **Yes** | Your creator ID from the dashboard |
 | `data-player` | No | Set to `"vimeo"` to target Vimeo iframes. Omit (or set to anything else) to target an HTML5 `<video>` element instead |
 | `data-autoplay` | No | Set to `"true"` to automatically start playback after the viewer unlocks the content |
-
-### Page Requirements
-
-- The page must contain exactly one Vimeo `<iframe>` whose `src` contains `player.vimeo.com/video/`
-- The iframe's parent element must not have `overflow: hidden` set — the overlay is injected as a sibling inside that parent
 
 ### Full Example
 
@@ -123,9 +118,9 @@ Place this tag anywhere on the page **after** the Vimeo iframe, ideally just bef
 
 ### How It Works
 
-1. On page load, the script checks whether the current URL matches the `data-match-pattern` (default: matches everything)
-2. If it matches, a full-viewport blur overlay is rendered over the page, and body scrolling is locked
-3. The viewer authenticates and purchases; on success, the overlay is removed, and scrolling is restored
+1. On page load, the script renders a full-viewport blur overlay over the page and locks body scrolling
+2. It looks up the current page URL in the LedeWire API — if no matching content is found, the overlay is silently removed and the page loads normally
+3. The viewer authenticates and purchases; on success, the overlay is removed and scrolling is restored
 4. The page content is never hidden — it is blurred and inaccessible until unlocked
 
 ### Setup in the LedeWire Dashboard
@@ -133,11 +128,11 @@ Place this tag anywhere on the page **after** the Vimeo iframe, ideally just bef
 Before the script tag will work, register your page:
 
 1. Go to **Content → New Content**
-2. Set the content type to **Article** (or appropriate type)
-3. In the **Metadata** field, add the `external_url` — this must exactly match the URL of your page (origin + pathname, e.g. `https://yourdomain.com/articles/my-article`)
+2. Set the content type to **Article** (or **External Ref** for non-article content)
+3. Set the **Content URI** field to the full URL of the page you want to paywall — e.g. `https://yourdomain.com/articles/my-article` (origin + pathname, no trailing slash, no query parameters)
 4. Set a price and publish
 
-The embed finds content by sending the current page URL to the API and matching it against registered `external_url` values. **If no match is found, the paywall does not render** — the page loads normally.
+The embed looks up content by sending the current page URL to the API and matching it against registered `content_uri` values. **If no match is found, the paywall does not render** — the page loads normally.
 
 ### Script Tag
 
@@ -157,32 +152,7 @@ Place this tag anywhere in the page, ideally just before `</body>`:
 |---|---|---|
 | `data-api-key` | **Yes** | Your publishable API key from the dashboard |
 | `data-creator-id` | **Yes** | Your creator ID from the dashboard |
-| `data-match-pattern` | No | A JavaScript regex pattern. The paywall only activates on URLs that match. Default: `.*` (all pages). Useful when the same script tag is included via a CMS template |
 | `data-external-url` | No | Override the URL sent to the API for content lookup. Defaults to `window.location.origin + window.location.pathname`. Use this if your CMS adds query parameters you want to strip, or if you're testing on a different port |
-
-### Using `data-match-pattern`
-
-If you include the script in a shared template but only want the paywall on specific pages:
-
-```html
-<!-- Only activate on URLs containing /premium/ -->
-<script
-  src="https://cdn.jsdelivr.net/gh/ledewire/embed@v1.0.0/dist/page-blocker.iife.js"
-  data-api-key="pk_live_abc123"
-  data-creator-id="creator_456"
-  data-match-pattern="/premium/"
-></script>
-```
-
-```html
-<!-- Only activate on specific article slugs -->
-<script
-  ...
-  data-match-pattern="/(my-article|another-article|third-article)"
-></script>
-```
-
-The pattern is matched against the full current URL using JavaScript's `RegExp` with no flags.
 
 ### Full Example
 
@@ -245,6 +215,10 @@ If the viewer has already purchased the content, the overlay appears briefly and
 
 If the viewer is logged in but has not purchased, they are taken directly to the Confirm Purchase modal (login step skipped).
 
+### Session Expiry
+
+Auth tokens are stored in `sessionStorage` (tab-scoped — cleared when the tab closes). If a session expires while the viewer is on the page, the login modal re-appears automatically so they can re-authenticate without a full page reload.
+
 ### Password Reset
 
 From the Login modal, viewers can request a password reset email via the "Forgot password?" link.
@@ -276,12 +250,12 @@ See the [releases page](https://github.com/ledewire/embed/releases) for all avai
 
 **Vimeo Blocker:**
 - Verify the Vimeo `<iframe>` is present on the page before the script executes
-- Check the browser console for errors — a missing or invalid `data-api-key` will log `"Missing API_KEY"` or an auth error
-- Confirm the Vimeo video ID in your iframe URL (`/video/XXXXXXX`) matches the ID registered in the LedeWire dashboard
+- Check the browser console for errors — a missing or invalid `data-api-key` will log an auth error
+- Confirm the Vimeo video ID in your iframe URL (`/video/XXXXXXX`) matches the `external_identifier` registered in the LedeWire dashboard — it must be formatted as `vimeo:XXXXXXX`
 
 **Page Blocker:**
-- Confirm the `external_url` registered in the dashboard exactly matches `window.location.origin + window.location.pathname` for the current page (no trailing slash differences, no query parameters)
-- If using `data-match-pattern`, verify your regex matches the current URL — test by running `/<your-pattern>/.test(window.location.href)` in the browser console
+- Confirm the `content_uri` registered in the dashboard exactly matches `window.location.origin + window.location.pathname` for the current page (no trailing slash differences, no query parameters)
+- If your URL has query parameters you want to ignore, use `data-external-url` to pass the canonical URL explicitly
 - If the API finds no content for the current URL, the paywall silently does not render — this is intentional
 
 ### Overlay appears but purchase never completes
@@ -305,4 +279,4 @@ The embed uses a **Shadow DOM** for all UI — its styles cannot affect your pag
 
 - **Never use your secret API key** in the script tag. The `data-api-key` attribute is your **publishable** key, visible in page source. Your secret key must remain server-side only.
 - The embed transmits credentials over HTTPS to `api.ledewire.com` only — no third-party analytics or tracking.
-- Auth tokens are stored in memory only (not `localStorage` or cookies), so they do not persist across page navigations or tabs by design.
+- Auth tokens are stored in `sessionStorage` (tab-scoped). They are never written to `localStorage` or cookies, and are cleared automatically when the tab closes. Tokens do not persist across tabs.

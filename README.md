@@ -1,15 +1,15 @@
-# LedeWire Embed Script
+# @ledewire/gate
 
-A lightweight paywall embed script for video content with email authentication.
+A lightweight paywall script for web content — drop in a single `<script>` tag to gate articles and Vimeo videos behind a LedeWire paywall.
 
 ## 📖 Documentation
 
 | Document                                           | Description                                                                                              |
 | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| [Integration Guide](docs/INTEGRATION_GUIDE.md)     | **Start here if you're embedding on a site.** Script tag usage, attributes, viewer flow, troubleshooting |
-| [CDN Release Roadmap](docs/CDN_RELEASE_ROADMAP.md) | jsDelivr CDN setup, GitHub Actions release process, version pinning                                      |
-| [Architecture](docs/ARCHITECTURE.md)               | How the embed works internally — entry points, Shadow DOM, modal state machine                           |
-| [Testing](docs/TESTING.md)                         | Test coverage summary and how to run tests                                                               |
+| [Integration Guide](docs/integration-guide.md)     | **Start here if you're embedding on a site.** Script tag usage, attributes, viewer flow, troubleshooting |
+| [CDN Release Roadmap](docs/cdn-release-roadmap.md) | jsDelivr CDN setup, GitHub Actions release process, version pinning                                      |
+| [Architecture](docs/architecture.md)               | How the embed works internally — entry points, Shadow DOM, modal state machine                           |
+| [Testing](docs/testing.md)                         | Test coverage summary and how to run tests                                                               |
 
 ## 🚀 Quick Start
 
