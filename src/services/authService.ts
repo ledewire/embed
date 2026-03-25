@@ -2,43 +2,27 @@
  * Authentication Service - Handles login, signup, and OAuth flows
  */
 
+import type {
+  AuthenticationResponse,
+  ContentWithAccessResponse,
+  ContentResponse,
+} from "@ledewire/browser";
 import { getSdkClient } from "./sdkClient";
 
 // Default key used by the SDK's sessionStorageAdapter (see @ledewire/browser index.js).
 const TOKEN_STORAGE_KEY = "lw:tokens";
 
-export interface AuthTokens {
-  access_token: string;
-  refresh_token: string;
-  expires_at: string;
-}
-
-export interface IContentMetadata {
-  id: string;
-  content_type: string;
-  title: string;
-  price_cents: number;
-  content_body: string;
-  teaser: string;
-  visibility: string;
-  metadata: {
-    author: string;
-    publish_date: string;
-    read_time: string;
-  };
-  access_info?: any;
-}
+// Re-export SDK types so callers don't need to import @ledewire/browser directly.
+export type AuthTokens = AuthenticationResponse;
+export type IContentMetadata = ContentWithAccessResponse;
+export type IContentSearchResult = ContentResponse;
 
 export class AuthService {
   static async loginWithEmail(
     email: string,
     password: string,
   ): Promise<AuthTokens> {
-    const response = await getSdkClient().auth.loginWithEmail({
-      email,
-      password,
-    });
-    return response as unknown as AuthTokens;
+    return getSdkClient().auth.loginWithEmail({ email, password });
   }
 
   static async loginWithGoogle(idToken: string): Promise<void> {
@@ -55,22 +39,20 @@ export class AuthService {
   static async getContentMetadata(
     contentId: string,
   ): Promise<IContentMetadata> {
-    const result = await getSdkClient().content.getWithAccess(contentId);
-    return result as unknown as IContentMetadata;
+    return getSdkClient().content.getWithAccess(contentId);
   }
 
   /**
-   * Search content by metadata (vimeo_id or external_url)
+   * Search content by metadata (uri or external_identifier)
    * Returns the first matching content or undefined if none found
    */
-  static async searchContentByMetadata(metadata: {
-    vimeo_id?: string;
-    external_url?: string;
-  }): Promise<IContentMetadata | undefined> {
-    // Note: metadata fields are untyped in SellerContentSearchRequest (SDK feedback #5).
-    const results = await getSdkClient().seller.content.search({ metadata });
+  static async searchContentByMetadata(params: {
+    uri?: string;
+    external_identifier?: string;
+  }): Promise<IContentSearchResult | undefined> {
+    const results = await getSdkClient().seller.content.search(params);
     if (results.length === 0) return undefined;
-    return results[0] as unknown as IContentMetadata;
+    return results[0];
   }
 
   static async signup(
@@ -79,12 +61,11 @@ export class AuthService {
     first_name: string,
     last_name: string,
   ): Promise<AuthTokens> {
-    const response = await getSdkClient().auth.signup({
+    return getSdkClient().auth.signup({
       email,
       password,
       name: `${first_name} ${last_name}`.trim(),
     });
-    return response as unknown as AuthTokens;
   }
 
   static logout(): void {
@@ -107,3 +88,4 @@ export class AuthService {
     return AuthService.isAuthenticated();
   }
 }
+

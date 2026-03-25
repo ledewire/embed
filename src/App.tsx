@@ -1,5 +1,6 @@
 import { useState, useEffect } from "preact/hooks";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import type { ContentResponse } from "@ledewire/browser";
 import { Overlay } from "./components/Overlay";
 import { LoginModal } from "./components/LoginModal";
 import { SignupModal } from "./components/SignupModal";
@@ -19,17 +20,7 @@ interface AppProps {
     autoplay?: boolean;
   };
   sellerConfig?: any;
-  contentMetadata?: {
-    id: string;
-    content_type: string;
-    title: string;
-    price_cents: number;
-    content_body?: string | null;
-    teaser?: string | null;
-    visibility: string;
-    metadata?: Record<string, unknown>;
-    access_info?: any;
-  };
+  contentMetadata?: ContentResponse;
   onUnlock?: () => void;
 }
 

@@ -40,17 +40,12 @@ const defaultSellerConfig = {
 
 const defaultContentMetadata = {
   id: "content-123",
-  content_type: "article",
+  content_type: "markdown" as const,
   title: "Test Article",
   price_cents: 199,
   content_body: "Body",
   teaser: "Teaser",
-  visibility: "premium",
-  metadata: {
-    author: "Author",
-    publish_date: "2025-01-01",
-    read_time: "5 min",
-  },
+  visibility: "unlisted" as const,
   access_info: null,
 };
 
