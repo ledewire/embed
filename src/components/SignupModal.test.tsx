@@ -72,8 +72,7 @@ describe("SignupModal", () => {
       expect(mockLw.auth.signup).toHaveBeenCalledWith({
         email: "jane@test.com",
         password: "password123",
-        first_name: "Jane",
-        last_name: "Doe",
+        name: "Jane Doe",
       });
     });
     await vi.advanceTimersByTimeAsync(300);

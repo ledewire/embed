@@ -63,8 +63,7 @@ export function SignupModal({
       await getSdkClient().auth.signup({
         email,
         password,
-        first_name: firstName,
-        last_name: lastName,
+        name: `${firstName} ${lastName}`.trim(),
       });
 
       if (onSignupSuccess) {

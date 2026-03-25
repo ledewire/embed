@@ -24,15 +24,11 @@ interface AppProps {
     content_type: string;
     title: string;
     price_cents: number;
-    content_body: string;
-    teaser: string;
+    content_body?: string | null;
+    teaser?: string | null;
     visibility: string;
-    metadata: {
-      author: string;
-      publish_date: string;
-      read_time: string;
-    };
-    access_info: any;
+    metadata?: Record<string, unknown>;
+    access_info?: any;
   };
   onUnlock?: () => void;
 }

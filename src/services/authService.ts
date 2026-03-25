@@ -26,7 +26,7 @@ export interface IContentMetadata {
     publish_date: string;
     read_time: string;
   };
-  access_info: any;
+  access_info?: any;
 }
 
 export class AuthService {
@@ -73,26 +73,6 @@ export class AuthService {
     return results[0] as unknown as IContentMetadata;
   }
 
-  static async getResetCode(email: string): Promise<{ message: string }> {
-    return getSdkClient().auth.requestPasswordReset({ email });
-  }
-
-  static async setNewPassword({
-    email,
-    newPassword,
-    otp,
-  }: {
-    email: string;
-    newPassword: string;
-    otp: string;
-  }): Promise<{ message: string }> {
-    return getSdkClient().auth.resetPassword({
-      email,
-      reset_code: otp,
-      password: newPassword,
-    });
-  }
-
   static async signup(
     email: string,
     password: string,
@@ -102,8 +82,7 @@ export class AuthService {
     const response = await getSdkClient().auth.signup({
       email,
       password,
-      first_name,
-      last_name,
+      name: `${first_name} ${last_name}`.trim(),
     });
     return response as unknown as AuthTokens;
   }
