@@ -4,15 +4,39 @@ import { createSdkClient, getSdkClient } from "../services/sdkClient";
 import style from "../style.css?inline";
 
 (function () {
-  function getPageScript() {
-    const script =
-      document.currentScript || document.querySelector("script[data-api-key]");
+  const SCRIPT_SELECTOR = 'script[src*="page-blocker.iife.js"]';
+  const DEFAULT_SCROLL_THRESHOLD = 0.7;
 
-    if (!script || !(script instanceof HTMLScriptElement)) {
-      return null;
+  function getParamsFromSrc(src: string): { trigger: string | null; scrollThreshold: string | null } {
+    try {
+      const base = typeof window !== "undefined" && window.location ? window.location.origin : "";
+      const url = new URL(src, base);
+      return {
+        trigger: url.searchParams.get("trigger"),
+        scrollThreshold: url.searchParams.get("scrollThreshold"),
+      };
+    } catch {
+      return { trigger: null, scrollThreshold: null };
     }
+  }
 
-    return script;
+  function parseThreshold(raw: string | null | undefined): number {
+    const t = parseFloat(raw ?? "");
+    return Number.isFinite(t) ? t : DEFAULT_SCROLL_THRESHOLD;
+  }
+
+  function getPageScript(): HTMLScriptElement | null {
+    const byAttr = document.querySelector(`${SCRIPT_SELECTOR}[data-trigger="scroll"]`);
+    const byUrl = Array.from(document.querySelectorAll(SCRIPT_SELECTOR)).find(
+      (s) => s instanceof HTMLScriptElement && getParamsFromSrc(s.src).trigger === "scroll"
+    );
+    const script =
+      (byAttr ?? byUrl) as HTMLScriptElement | null ??
+      document.currentScript ??
+      document.querySelector(SCRIPT_SELECTOR) ??
+      document.querySelector("script[data-api-key]");
+
+    return script instanceof HTMLScriptElement ? script : null;
   }
 
   function getScriptConfig() {
@@ -45,13 +69,71 @@ import style from "../style.css?inline";
     };
   }
 
-  // Wait for body to be available
-  async function init() {
+  type TriggerConfig = { mode: "scroll"; threshold: number } | { mode: "immediate" };
+
+  function getTriggerConfig(): TriggerConfig {
+    try {
+      const global = (window as Window & { EMBED_PAGE_BLOCKER_CONFIG?: { trigger?: string; scrollThreshold?: number | string } }).EMBED_PAGE_BLOCKER_CONFIG;
+      if (global && typeof global === "object" && global.trigger === "scroll") {
+        const raw = global.scrollThreshold != null ? String(global.scrollThreshold) : undefined;
+        return { mode: "scroll", threshold: parseThreshold(raw) };
+      }
+    } catch {
+      /* ignore */
+    }
+    const scripts = document.querySelectorAll(SCRIPT_SELECTOR);
+    for (const s of scripts) {
+      if (!(s instanceof HTMLScriptElement)) continue;
+      const trigger = s.dataset.trigger ?? getParamsFromSrc(s.src).trigger;
+      if (trigger === "scroll") {
+        const raw = s.dataset.scrollThreshold ?? getParamsFromSrc(s.src).scrollThreshold;
+        return { mode: "scroll", threshold: parseThreshold(raw) };
+      }
+    }
+    const script = getPageScript();
+    if (!script) return { mode: "immediate" };
+    const trigger = script.dataset.trigger ?? getParamsFromSrc(script.src).trigger ?? "immediate";
+    if (trigger === "scroll") {
+      const raw = script.dataset.scrollThreshold ?? getParamsFromSrc(script.src).scrollThreshold;
+      return { mode: "scroll", threshold: parseThreshold(raw) };
+    }
+    return { mode: "immediate" };
+  }
+
+  function waitForScrollThenInit(threshold: number) {
+    let done = false;
+    const opts: AddEventListenerOptions = { passive: true };
+    function check() {
+      if (done) return;
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if (maxScroll <= 0) return;
+      if (window.scrollY / maxScroll >= threshold) {
+        done = true;
+        window.removeEventListener("scroll", check, opts);
+        init();
+      }
+    }
+    window.addEventListener("scroll", check, opts);
+    check();
+  }
+
+  function bootstrap() {
     if (!document.body) {
-      window.addEventListener("DOMContentLoaded", init);
+      window.addEventListener("DOMContentLoaded", bootstrap);
       return;
     }
+    setTimeout(() => {
+      const config = getTriggerConfig();
+      if (config.mode === "scroll") {
+        waitForScrollThenInit(config.threshold);
+      } else {
+        init();
+      }
+    }, 0);
+  }
 
+  // Initialize the blocker (creates overlay, auth, render)
+  async function init() {
     const config = await getScriptConfig();
 
     // Locate script element
@@ -140,5 +222,5 @@ import style from "../style.css?inline";
     }
   }
 
-  init();
+  bootstrap();
 })();
