@@ -7,6 +7,8 @@ A lightweight paywall script for web content — drop in a single `<script>` tag
 | Document                                           | Description                                                                                              |
 | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | [Integration Guide](docs/integration-guide.md)     | **Start here if you're embedding on a site.** Script tag usage, attributes, viewer flow, troubleshooting |
+| [Ghost Integration](docs/GHOST_INTEGRATION_STEPS.md) | Ghost local setup and Code Injection steps for testing the page blocker |
+| [Beehiiv Integration](docs/BEEHIIV_INTEGRATION_STEPS.md) | Beehiiv web post setup, script placement, scroll trigger examples, and platform limitations |
 | [CDN Release Roadmap](docs/cdn-release-roadmap.md) | jsDelivr CDN setup, GitHub Actions release process, version pinning                                      |
 | [Architecture](docs/architecture.md)               | How the embed works internally — entry points, Shadow DOM, modal state machine                           |
 | [Testing](docs/testing.md)                         | Test coverage summary and how to run tests                                                               |
@@ -82,6 +84,8 @@ Browser → https://api.ledewire.com/v1 ✅
 - ✅ Email/Password authentication
 - � Google OAuth login (coming soon)
 - ✅ Video paywall overlay
+- ✅ Full-page article paywall overlay
+- ✅ Scroll-triggered page paywall
 - ✅ Purchase confirmation flow
 - ✅ Token management (JWT)
 - ✅ **Auto token refresh** - Seamless session extension

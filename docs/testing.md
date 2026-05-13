@@ -141,7 +141,9 @@ npm run test:coverage
 |-----------|----------------|--------------|
 | Finds script with `data-api-key` and creates overlay when content found | Full page blocker bootstrap | Validates script config parsing, SDK client creation, content lookup by URI, overlay creation, and App render |
 
-**Why it matters:** Page blocker is the article paywall entry. This test ensures the full bootstrap path works end-to-end.
+**Why it matters:** Page blocker is the article paywall entry. This test ensures the full immediate-mode bootstrap path works end-to-end.
+
+**Scroll trigger coverage note:** Scroll-trigger mode is implemented in `page-blocker.tsx` and should be manually verified until dedicated automated coverage is added. Test the script with `data-trigger="scroll"` and `data-scroll-threshold="0.7"`, confirm no overlay appears on initial load, scroll past the configured threshold, then confirm the same overlay and purchase flow render.
 
 ---
 
@@ -184,4 +186,3 @@ Passing tests give confidence before deploying to staging or production.
 | App | 1 | 4 | Checkout state, modal flow, session expiry |
 | Entries | 2 | 3 | Page and Vimeo blocker bootstrap |
 | **Total** | **11** | **42** | Full coverage of critical paths |
-

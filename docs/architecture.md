@@ -63,13 +63,25 @@ The embed compiles to two separate IIFE bundles, selectable at build time via th
 **Use case:** Paywall over an entire article/page (text content).
 
 **Bootstrap sequence:**
-1. Reads config similarly but derives a `contentId` via `data-external-url` (or falls back to `window.location.origin + pathname`).
-2. Creates a **full-viewport fixed overlay** (`100vw × 100vh`, `z-index: 2147483647`) with a frosted-glass backdrop (`blur(10px)`).
-3. Sets `document.body.style.overflow = "hidden"` to prevent scrolling the underlying content.
-4. Attaches a **Shadow DOM** for style isolation.
-5. Authenticates the seller and searches for content metadata by `external_url`.
-6. Renders the Preact `App`.
-7. On unlock, removes the overlay container and restores `body.overflow`.
+1. Waits for `document.body`, then resolves trigger mode.
+2. Defaults to immediate mode. If scroll mode is configured, waits until the viewer reaches the configured scroll threshold before continuing.
+3. Reads config similarly but derives a `contentId` via `data-external-url` (or falls back to `window.location.origin + pathname`).
+4. Creates a **full-viewport fixed overlay** (`100vw × 100vh`, `z-index: 2147483647`) with a frosted-glass backdrop (`blur(10px)`).
+5. Sets `document.body.style.overflow = "hidden"` to prevent scrolling the underlying content.
+6. Attaches a **Shadow DOM** for style isolation.
+7. Authenticates the seller and searches for content metadata by `external_url`.
+8. Renders the Preact `App`.
+9. On unlock, removes the overlay container and restores `body.overflow`.
+
+**Scroll trigger configuration:**
+
+| Source | Example | Notes |
+|--------|---------|-------|
+| Script attributes | `data-trigger="scroll"` and `data-scroll-threshold="0.7"` | Preferred for normal embeds |
+| Script URL params | `?trigger=scroll&scrollThreshold=0.7` | Useful when a CMS cannot add custom attributes |
+| Global config | `window.EMBED_PAGE_BLOCKER_CONFIG = { trigger: "scroll", scrollThreshold: 0.7 }` | Must be defined before the page blocker script loads |
+
+The threshold is parsed as a number and defaults to `0.7` when missing or invalid. Scroll progress is calculated as `window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)`, so pages with no scrollable height do not fire the scroll trigger.
 
 ---
 
@@ -278,7 +290,7 @@ Page load
 - **Session persistence** — In-memory storage is XSS-safe but means a page refresh forces re-authentication. Returning viewers who do not have a valid token will see the paywall again even after purchase (until `verifyPurchase` confirms ownership).
 - **Analytics** — No `/ahoy/events` calls are made; events such as `unlock_clicked` and `video_unlocked` are not tracked.
 - **YouTube / Wistia** — Only Vimeo and native HTML5 `<video>` are supported.
-- **Beehiiv adapter** — Planned but not implemented.
+- **Beehiiv adapter** — There is no separate Beehiiv adapter. Beehiiv web posts should use the generic `page-blocker.iife.js` flow documented in [Beehiiv Integration Steps](./BEEHIIV_INTEGRATION_STEPS.md), subject to Beehiiv's script-injection limitations.
 
 ---
 

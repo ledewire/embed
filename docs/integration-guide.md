@@ -118,10 +118,11 @@ Place this tag anywhere on the page **after** the Vimeo iframe, ideally just bef
 
 ### How It Works
 
-1. On page load, the script renders a full-viewport blur overlay over the page and locks body scrolling
-2. It looks up the current page URL in the LedeWire API — if no matching content is found, the overlay is silently removed and the page loads normally
-3. The viewer authenticates and purchases; on success, the overlay is removed and scrolling is restored
-4. The page content is never hidden — it is blurred and inaccessible until unlocked
+1. By default, the script renders a full-viewport blur overlay as soon as the page loads and locks body scrolling
+2. If scroll trigger is enabled, the script waits until the viewer reaches the configured scroll depth before rendering the overlay
+3. It looks up the current page URL in the LedeWire API — if no matching content is found, the overlay is silently removed and the page loads normally
+4. The viewer authenticates and purchases; on success, the overlay is removed and scrolling is restored
+5. The page content is never hidden — it is blurred and inaccessible until unlocked
 
 ### Setup in the LedeWire Dashboard
 
@@ -153,6 +154,8 @@ Place this tag anywhere in the page, ideally just before `</body>`:
 | `data-api-key` | **Yes** | Your publishable API key from the dashboard |
 | `data-creator-id` | **Yes** | Your creator ID from the dashboard |
 | `data-external-url` | No | Override the URL sent to the API for content lookup. Defaults to `window.location.origin + window.location.pathname`. Use this if your CMS adds query parameters you want to strip, or if you're testing on a different port |
+| `data-trigger` | No | Set to `"scroll"` to delay the paywall until the viewer scrolls to the configured threshold. Omit for immediate blocking |
+| `data-scroll-threshold` | No | Scroll depth ratio for `data-trigger="scroll"`. Defaults to `0.7` (70%). Examples: `0.5`, `0.7`, `0.9` |
 
 ### Full Example
 
@@ -178,6 +181,63 @@ Place this tag anywhere in the page, ideally just before `</body>`:
 </body>
 </html>
 ```
+
+---
+
+## Page Blocker Scroll Trigger
+
+Use the scroll trigger when you want readers to preview part of an article before the paywall appears.
+
+### Attribute Configuration
+
+```html
+<script
+  src="https://cdn.jsdelivr.net/gh/ledewire/embed@v1.0.0/dist/page-blocker.iife.js"
+  data-api-key="YOUR_PUBLISHABLE_API_KEY"
+  data-creator-id="YOUR_CREATOR_ID"
+  data-trigger="scroll"
+  data-scroll-threshold="0.7"
+></script>
+```
+
+The threshold is a ratio of total scrollable page height. For example, `0.7` means the overlay appears after the viewer reaches 70% of the scrollable page.
+
+### Query Parameter Configuration
+
+If a CMS makes it difficult to add custom `data-*` attributes, the same values can be passed in the script URL:
+
+```html
+<script
+  src="https://cdn.jsdelivr.net/gh/ledewire/embed@v1.0.0/dist/page-blocker.iife.js?trigger=scroll&scrollThreshold=0.7"
+  data-api-key="YOUR_PUBLISHABLE_API_KEY"
+  data-creator-id="YOUR_CREATOR_ID"
+></script>
+```
+
+### Global Configuration
+
+For custom templates that need to set the trigger before loading the embed:
+
+```html
+<script>
+  window.EMBED_PAGE_BLOCKER_CONFIG = {
+    trigger: "scroll",
+    scrollThreshold: 0.7
+  };
+</script>
+<script
+  src="https://cdn.jsdelivr.net/gh/ledewire/embed@v1.0.0/dist/page-blocker.iife.js"
+  data-api-key="YOUR_PUBLISHABLE_API_KEY"
+  data-creator-id="YOUR_CREATOR_ID"
+></script>
+```
+
+### Trigger Rules
+
+- Immediate mode remains the default when no scroll trigger is configured.
+- Scroll mode initializes the same page blocker flow only once, after the threshold is reached.
+- Invalid or missing threshold values fall back to `0.7`.
+- Very short pages with no scrollable height will not trigger the scroll paywall; use immediate mode for those pages.
 
 ---
 
@@ -257,6 +317,8 @@ See the [releases page](https://github.com/ledewire/embed/releases) for all avai
 - Confirm the `content_uri` registered in the dashboard exactly matches `window.location.origin + window.location.pathname` for the current page (no trailing slash differences, no query parameters)
 - If your URL has query parameters you want to ignore, use `data-external-url` to pass the canonical URL explicitly
 - If the API finds no content for the current URL, the paywall silently does not render — this is intentional
+- If `data-trigger="scroll"` is enabled, scroll past the configured threshold before expecting the paywall to appear
+- If the page is too short to scroll, remove the scroll trigger or use a lower threshold
 
 ### Overlay appears but purchase never completes
 

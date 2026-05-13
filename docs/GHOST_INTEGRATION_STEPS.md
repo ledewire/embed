@@ -21,7 +21,7 @@ ghost install local
 - Useful commands (run from `~/my-ghost`): `ghost stop`, `ghost start`, `ghost ls`.
 - If you see "Current directory is not empty", you are in the wrong folder; use an empty one.
 
-#### NOTE: Paywall on Ghost will only be visible if the external URl (eg: **http://localhost:2368*) is registered
+#### NOTE: Paywall on Ghost will only be visible if the external URL (for example, **http://localhost:2368**) is registered in LedeWire.
 
 ## Implementation
 1. **Serve the script** so Ghost can load it. From the embed repo (in a separate terminal):
@@ -40,3 +40,18 @@ ghost install local
    </script>
    ```
 4. Click **Save**, and the paywall should appear on the page for registered content.
+
+## Scroll Trigger Option
+
+Use the scroll trigger when Ghost readers should see part of the post before the paywall appears:
+
+```html
+<script src="http://localhost:3000/dist/page-blocker.iife.js"
+  data-api-key="YOUR_API_KEY"
+  data-creator-id="creator_456"
+  data-trigger="scroll"
+  data-scroll-threshold="0.7">
+</script>
+```
+
+`data-scroll-threshold="0.7"` means the paywall appears after the reader reaches 70% of the scrollable page. If the post is short, use a lower value or remove `data-trigger="scroll"` to block immediately.

@@ -191,7 +191,7 @@ Creators will use:
 
 ## **Stretch Deliverables (Week 2\)**
 
-* `beehiivAdapter.js`: small wrapper that injects the same logic into Beehiiv posts.
+* Beehiiv integration guide for using the generic page blocker on Beehiiv web posts.
 * Simple CLI or static generator to produce embed snippet from a content\_id \+ price.
 
 ---
@@ -201,4 +201,3 @@ Creators will use:
  They can drop one `<script>` tag into their Vimeo or HTML5 player page and start generating revenue.
 
 ---
-
